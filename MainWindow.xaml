@@ -1,0 +1,119 @@
+<Window x:Class="DisplayManagerClone.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tb="clr-namespace:H.NotifyIcon;assembly=H.NotifyIcon.Wpf"
+        Title="Display Manager Clone" Height="600" Width="800"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <tb:TaskbarIcon x:Name="TrayIcon" ToolTipText="Display Manager Clone">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Settings" Click="Settings_Click" />
+                    <MenuItem Header="Exit" Click="Exit_Click" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+        
+        <TabControl Margin="10">
+            <TabItem Header="Window Manager">
+                <StackPanel Margin="20">
+                    <TextBlock Text="Window Manager Settings" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+                    <TextBlock Text="Hotkey to move active window to next monitor:" />
+                    <TextBlock Text="Ctrl + Win + X" FontWeight="Bold" Margin="0,5,0,0"/>
+                    <TextBlock Text="Close this window to minimize to system tray." Margin="0,40,0,0" FontStyle="Italic" Foreground="Gray"/>
+                </StackPanel>
+            </TabItem>
+            
+            <TabItem Header="Wallpapers">
+                <StackPanel Margin="20">
+                    <TextBlock Text="Multi-Monitor Wallpapers" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="Select Monitor:" Margin="0,0,0,5" />
+                    <ComboBox x:Name="CmbMonitors" DisplayMemberPath="DisplayName" SelectionChanged="CmbMonitors_SelectionChanged" Margin="0,0,0,15" />
+                    
+                    <TextBlock Text="Select Image:" Margin="0,0,0,5" />
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtImagePath" IsReadOnly="True" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="Browse..." Width="80" Padding="5" Click="Browse_Click" />
+                    </Grid>
+                    
+                    <Button Content="Apply Wallpaper" Padding="10" Click="ApplyWallpaper_Click" FontWeight="Bold" />
+                </StackPanel>
+            </TabItem>
+            
+            <TabItem Header="Monitor Control Center">
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Top Bar: Profiles and Identify -->
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" Grid.Column="0">
+                            <Button Content="Save Layout" Padding="15,5" Click="SaveLayout_Click" FontWeight="Bold" Margin="0,0,10,0"/>
+                            <Button Content="Restore Layout" Padding="15,5" Click="RestoreLayout_Click" FontWeight="Bold" Margin="0,0,15,0"/>
+                            <CheckBox x:Name="ChkAutoRecovery" Content="Watchdog Auto-Recovery" VerticalAlignment="Center" Checked="ChkAutoRecovery_CheckedChanged" Unchecked="ChkAutoRecovery_CheckedChanged" />
+                        </StackPanel>
+                        
+                        <Button Grid.Column="2" Content="Identify" Padding="20,5" Click="Identify_Click" FontWeight="Bold" Background="#FF333333" Foreground="White" />
+                    </Grid>
+                    
+                    <!-- Visual Monitor Canvas -->
+                    <Border Grid.Row="1" BorderBrush="#FF444444" BorderThickness="1" Background="#FF222222" Margin="0,0,0,15">
+                        <Canvas x:Name="MonitorCanvas" ClipToBounds="True" Background="Transparent" 
+                                MouseLeftButtonDown="MonitorCanvas_MouseLeftButtonDown"
+                                MouseMove="MonitorCanvas_MouseMove"
+                                MouseLeftButtonUp="MonitorCanvas_MouseLeftButtonUp" />
+                    </Border>
+                    
+                    <!-- Bottom Control Panel -->
+                    <Border Grid.Row="2" Background="#FFF0F0F0" Padding="15" CornerRadius="5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,10">
+                                <TextBlock Text="Select Monitor:" Margin="0,0,0,5" FontWeight="Bold" />
+                                <ComboBox x:Name="CmbConfigMonitors" DisplayMemberPath="DisplayName" SelectionChanged="CmbConfigMonitors_SelectionChanged" Width="250" />
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,10">
+                                <TextBlock Text="Resolution:" Margin="0,0,0,5" FontWeight="Bold" />
+                                <ComboBox x:Name="CmbResolutions" SelectionChanged="CmbResolutions_SelectionChanged" Width="200" />
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="0" Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,0,10">
+                                <Button Content="Apply Settings" Padding="20,10" Click="ApplyConfig_Click" FontWeight="Bold" Background="#FF0078D7" Foreground="White" />
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
+                                <CheckBox x:Name="ChkPrimary" Content="Make this my main display" VerticalAlignment="Center" Margin="0,0,20,0" Checked="ChkPrimary_Checked" Unchecked="ChkPrimary_Checked" />
+                                <TextBlock Text="Position (X, Y): " VerticalAlignment="Center" />
+                                <TextBox x:Name="TxtPosX" Width="50" Margin="0,0,5,0" TextChanged="TxtPos_TextChanged" />
+                                <TextBox x:Name="TxtPosY" Width="50" TextChanged="TxtPos_TextChanged" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
