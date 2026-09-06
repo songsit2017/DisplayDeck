@@ -25,24 +25,121 @@
             </TabItem>
             
             <TabItem Header="Wallpapers">
-                <StackPanel Margin="20">
-                    <TextBlock Text="Multi-Monitor Wallpapers" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     
-                    <TextBlock Text="Select Monitor:" Margin="0,0,0,5" />
-                    <ComboBox x:Name="CmbMonitors" DisplayMemberPath="DisplayName" SelectionChanged="CmbMonitors_SelectionChanged" Margin="0,0,0,15" />
+                    <CheckBox Grid.Row="0" Content="Allow DisplayManager to manage the Desktop Wallpaper" Margin="5" IsChecked="True" />
                     
-                    <TextBlock Text="Select Image:" Margin="0,0,0,5" />
-                    <Grid Margin="0,0,0,20">
+                    <GroupBox Grid.Row="1" Header="Wallpaper Profile" Margin="5">
+                        <Grid Margin="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Margin="0,0,5,0" SelectedIndex="0">
+                                <ComboBoxItem Content="Default Profile"/>
+                            </ComboBox>
+                            <Button Grid.Column="1" Content="New Profile" Width="80" Margin="5,0"/>
+                            <Button Grid.Column="2" Content="Rename" Width="70" Margin="5,0"/>
+                            <Button Grid.Column="3" Content="Save As" Width="70" Margin="5,0"/>
+                            <Button Grid.Column="4" Content="Delete" Width="70" Margin="5,0"/>
+                            <Button Grid.Column="5" Content="Use Default Options" Width="120" Margin="5,0"/>
+                        </Grid>
+                    </GroupBox>
+                    
+                    <Border Grid.Row="2" Background="Black" Margin="5" BorderBrush="Gray" BorderThickness="1">
+                        <!-- Monitor Preview Canvas -->
+                        <Canvas x:Name="WallpaperCanvas" ClipToBounds="True" Background="Transparent" 
+                                MouseLeftButtonDown="WallpaperCanvas_MouseLeftButtonDown"/>
+                    </Border>
+                    
+                    <Grid Grid.Row="3" Margin="5">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1.5*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="TxtImagePath" IsReadOnly="True" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Content="Browse..." Width="80" Padding="5" Click="Browse_Click" />
+                        
+                        <StackPanel Grid.Column="0">
+                            <GroupBox Header="Background Mode" Margin="0,0,5,5">
+                                <StackPanel Margin="5">
+                                    <RadioButton x:Name="RbSpan" Content="Span an image across all monitors" Margin="0,2"/>
+                                    <RadioButton x:Name="RbDifferentImage" Content="Use a different image for each monitor" IsChecked="True" Margin="0,2"/>
+                                    <RadioButton x:Name="RbSameImage" Content="Use the same image on each monitor" Margin="0,2"/>
+                                </StackPanel>
+                            </GroupBox>
+                            <GroupBox Header="Wallpaper Source" Margin="0,5,5,0">
+                                <Grid Margin="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Source:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBlock x:Name="TxtWallpaperSource" Grid.Column="1" Text="Solid Color" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="2" Content="Change" Width="70" Click="ChangeWallpaperSource_Click"/>
+                                </Grid>
+                            </GroupBox>
+                        </StackPanel>
+                        
+                        <GroupBox Grid.Column="1" Header="Monitor Settings" Margin="5,0,0,0">
+                            <TabControl Margin="5">
+                                <TabItem Header="Color">
+                                    <Grid Margin="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Color Mode:" Margin="0,0,0,5"/>
+                                            <RadioButton Content="Normal" IsChecked="True" Margin="0,2"/>
+                                            <RadioButton Content="Grayscale" Margin="0,2"/>
+                                            <RadioButton Content="Sepia Tone" Margin="0,2"/>
+                                            <RadioButton Content="Inverted" Margin="0,2"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Background Color:" Margin="0,0,0,5"/>
+                                            <Button Width="80" Height="25" Background="Black" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                            <CheckBox Content="Use Background Gradient" Margin="0,0,0,5"/>
+                                            <Button Width="80" Height="25" Background="Black" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                            <TextBlock Text="Gradient Angle (degrees):"/>
+                                            <TextBox Text="0" Width="40" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </TabItem>
+                                <TabItem Header="Adjustments">
+                                    <TextBlock Text="Adjustments content goes here" Margin="10"/>
+                                </TabItem>
+                                <TabItem Header="Info">
+                                    <TextBlock Text="Info content goes here" Margin="10"/>
+                                </TabItem>
+                            </TabControl>
+                        </GroupBox>
                     </Grid>
                     
-                    <Button Content="Apply Wallpaper" Padding="10" Click="ApplyWallpaper_Click" FontWeight="Bold" />
-                </StackPanel>
+                    <Grid Grid.Row="4" Margin="5,15,5,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Wallpaper Settings" Width="120" Padding="5"/>
+                        <Button Grid.Column="2" Content="OK" Width="80" Padding="5" Margin="5,0"/>
+                        <Button Grid.Column="3" Content="Cancel" Width="80" Padding="5" Margin="5,0"/>
+                        <Button Grid.Column="4" Content="Apply" Width="80" Padding="5" Margin="5,0" Click="ApplyWallpaper_Click"/>
+                    </Grid>
+                </Grid>
             </TabItem>
             
             <TabItem Header="Monitor Control Center">

@@ -49,7 +49,7 @@ namespace DisplayManagerClone
         void Enable(bool enable);
     }
 
-    internal enum DesktopWallpaperPosition
+    public enum DesktopWallpaperPosition
     {
         Center = 0,
         Tile = 1,

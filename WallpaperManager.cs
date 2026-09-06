@@ -60,14 +60,25 @@ namespace DisplayManagerClone
         {
             try
             {
-                // Fill position is usually best for per-monitor wallpapers
-                _desktopWallpaper.SetPosition(DesktopWallpaperPosition.Fill);
+                // We don't set position here anymore, we let the UI decide
                 _desktopWallpaper.SetWallpaper(monitorDevicePath, imagePath);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to set wallpaper: {ex.Message}");
                 throw;
+            }
+        }
+
+        public void SetPosition(DesktopWallpaperPosition position)
+        {
+            try
+            {
+                _desktopWallpaper.SetPosition(position);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to set position: {ex.Message}");
             }
         }
     }

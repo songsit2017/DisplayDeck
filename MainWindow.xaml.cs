@@ -98,14 +98,7 @@ namespace DisplayManagerClone
         {
             if (_wallpaperManager == null) _wallpaperManager = new WallpaperManager();
             
-            var monitors = _wallpaperManager.GetMonitors();
-            CmbMonitors.ItemsSource = monitors;
-            if (monitors.Count > 0)
-            {
-                CmbMonitors.SelectedIndex = 0;
-            }
-
-            // Load Configuration Monitors
+            // Load Configuration Monitors for both tabs
             _configMonitors = _configManager.GetMonitors();
             CmbConfigMonitors.ItemsSource = _configMonitors;
             if (_configMonitors.Count > 0)
@@ -113,6 +106,7 @@ namespace DisplayManagerClone
                 CmbConfigMonitors.SelectedIndex = 0;
             }
             DrawMonitorCanvas();
+            DrawWallpaperCanvas();
         }
 
         private void DrawMonitorCanvas()
@@ -375,37 +369,225 @@ namespace DisplayManagerClone
             }
         }
 
-        private void CmbMonitors_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private MonitorConfig _selectedWallpaperMonitor;
+        private System.Collections.Generic.Dictionary<string, string> _monitorWallpapers = new System.Collections.Generic.Dictionary<string, string>();
+
+        private void DrawWallpaperCanvas()
         {
-            if (CmbMonitors.SelectedItem is MonitorInfo monitor)
+            WallpaperCanvas.Children.Clear();
+            if (_configMonitors.Count == 0) return;
+
+            // Calculate bounding box of all monitors
+            int minX = int.MaxValue, minY = int.MaxValue;
+            int maxX = int.MinValue, maxY = int.MinValue;
+            foreach (var m in _configMonitors)
             {
-                TxtImagePath.Text = monitor.CurrentWallpaper;
+                if (m.X < minX) minX = m.X;
+                if (m.Y < minY) minY = m.Y;
+                if (m.X + m.CurrentResolution.Width > maxX) maxX = m.X + m.CurrentResolution.Width;
+                if (m.Y + m.CurrentResolution.Height > maxY) maxY = m.Y + m.CurrentResolution.Height;
+            }
+
+            double totalWidth = maxX - minX;
+            double totalHeight = maxY - minY;
+
+            // Canvas size for Wallpaper tab
+            double availableWidth = 700;
+            double availableHeight = 250;
+
+            // Calculate scale
+            double scaleX = (availableWidth - 40) / totalWidth;
+            double scaleY = (availableHeight - 40) / totalHeight;
+            double scale = Math.Min(scaleX, scaleY);
+            if (scale > 0.15) scale = 0.15;
+
+            // Center offset
+            double offsetX = (availableWidth - (totalWidth * scale)) / 2 - (minX * scale);
+            double offsetY = (availableHeight - (totalHeight * scale)) / 2 - (minY * scale);
+
+            int index = 1;
+            foreach (var m in _configMonitors)
+            {
+                System.Windows.Media.Brush backgroundBrush = m == _selectedWallpaperMonitor ? _primaryColor : _secondaryColor;
+                
+                string currentWallpaperPath = null;
+                if (_monitorWallpapers.ContainsKey(m.DeviceName))
+                {
+                    currentWallpaperPath = _monitorWallpapers[m.DeviceName];
+                }
+                else
+                {
+                    currentWallpaperPath = _wallpaperManager?.GetWallpaperForIndex(index - 1);
+                    if (!string.IsNullOrEmpty(currentWallpaperPath))
+                        _monitorWallpapers[m.DeviceName] = currentWallpaperPath;
+                }
+
+                if (!string.IsNullOrEmpty(currentWallpaperPath) && System.IO.File.Exists(currentWallpaperPath))
+                {
+                    try
+                    {
+                        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.UriSource = new Uri(currentWallpaperPath, UriKind.Absolute);
+                        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        bitmap.DecodePixelWidth = 200; // Optimization
+                        bitmap.EndInit();
+
+                        backgroundBrush = new System.Windows.Media.ImageBrush(bitmap)
+                        {
+                            Stretch = System.Windows.Media.Stretch.UniformToFill,
+                            Opacity = m == _selectedWallpaperMonitor ? 1.0 : 0.6
+                        };
+                    }
+                    catch { }
+                }
+
+                Border border = new Border
+                {
+                    Width = m.CurrentResolution.Width * scale,
+                    Height = m.CurrentResolution.Height * scale,
+                    BorderThickness = new Thickness(m == _selectedWallpaperMonitor ? 3 : 1),
+                    CornerRadius = new CornerRadius(0),
+                    Background = backgroundBrush,
+                    BorderBrush = m == _selectedWallpaperMonitor ? System.Windows.Media.Brushes.DeepSkyBlue : System.Windows.Media.Brushes.DimGray,
+                    Tag = m
+                };
+
+                TextBlock tbNumber = new TextBlock
+                {
+                    Text = index.ToString(),
+                    Foreground = System.Windows.Media.Brushes.White,
+                    FontSize = 40,
+                    FontWeight = FontWeights.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 5, ShadowDepth = 2 }
+                };
+                border.Child = tbNumber;
+
+                Canvas.SetLeft(border, (m.X * scale) + offsetX);
+                Canvas.SetTop(border, (m.Y * scale) + offsetY);
+                WallpaperCanvas.Children.Add(border);
+                
+                // If it's the selected one, update the UI labels
+                if (m == _selectedWallpaperMonitor)
+                {
+                    TxtWallpaperSource.Text = currentWallpaperPath ?? "Solid Color";
+                }
+
+                index++;
             }
         }
 
-        private void Browse_Click(object sender, RoutedEventArgs e)
+        private void WallpaperCanvas_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            if (e.OriginalSource is FrameworkElement fe && fe.Parent is Border border && border.Tag is MonitorConfig config)
+            {
+                _selectedWallpaperMonitor = config;
+                DrawWallpaperCanvas();
+            }
+            else if (e.OriginalSource is Border b && b.Tag is MonitorConfig c)
+            {
+                _selectedWallpaperMonitor = c;
+                DrawWallpaperCanvas();
+            }
+        }
+
+        private void ChangeWallpaperSource_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedWallpaperMonitor == null)
+            {
+                if (_configMonitors.Count > 0)
+                    _selectedWallpaperMonitor = _configMonitors[0];
+                else
+                    return;
+            }
+
             var dialog = new Microsoft.Win32.OpenFileDialog();
             dialog.Filter = "Image Files (*.bmp;*.jpg;*.jpeg;*.png)|*.BMP;*.JPG;*.JPEG;*.PNG|All files (*.*)|*.*";
             if (dialog.ShowDialog() == true)
             {
-                TxtImagePath.Text = dialog.FileName;
+                string path = dialog.FileName;
+                _monitorWallpapers[_selectedWallpaperMonitor.DeviceName] = path;
+                TxtWallpaperSource.Text = path;
+                DrawWallpaperCanvas();
             }
         }
 
         private void ApplyWallpaper_Click(object sender, RoutedEventArgs e)
         {
-            if (CmbMonitors.SelectedItem is MonitorInfo monitor && !string.IsNullOrEmpty(TxtImagePath.Text))
+            try
             {
-                try
+                if (RbSpan.IsChecked == true)
                 {
-                    _wallpaperManager.SetWallpaper(monitor.DevicePath, TxtImagePath.Text);
-                    MessageBox.Show("Wallpaper applied successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Span);
+                    // Just apply the first monitor's wallpaper to all, or let Windows handle span
+                    if (_monitorWallpapers.Count > 0)
+                    {
+                        var firstWallpaper = _monitorWallpapers.Values.GetEnumerator();
+                        if (firstWallpaper.MoveNext() && !string.IsNullOrEmpty(firstWallpaper.Current))
+                        {
+                            var hwMonitors = _wallpaperManager.GetMonitors();
+                            if (hwMonitors.Count > 0)
+                            {
+                                // In span mode, setting it on the primary or all monitors usually works
+                                foreach (var hw in hwMonitors)
+                                {
+                                    _wallpaperManager.SetWallpaper(hw.DevicePath, firstWallpaper.Current);
+                                }
+                            }
+                        }
+                    }
                 }
-                catch (Exception ex)
+                else if (RbSameImage.IsChecked == true)
                 {
-                    MessageBox.Show($"Error applying wallpaper: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
+                    if (_monitorWallpapers.Count > 0)
+                    {
+                        // Get the wallpaper of the currently selected monitor, or the first one available
+                        string pathToApply = null;
+                        if (_selectedWallpaperMonitor != null && _monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
+                        {
+                            pathToApply = _monitorWallpapers[_selectedWallpaperMonitor.DeviceName];
+                        }
+                        else
+                        {
+                            var firstWallpaper = _monitorWallpapers.Values.GetEnumerator();
+                            if (firstWallpaper.MoveNext()) pathToApply = firstWallpaper.Current;
+                        }
+
+                        if (!string.IsNullOrEmpty(pathToApply))
+                        {
+                            foreach (var hw in _wallpaperManager.GetMonitors())
+                            {
+                                _wallpaperManager.SetWallpaper(hw.DevicePath, pathToApply);
+                            }
+                        }
+                    }
                 }
+                else // Different image per monitor
+                {
+                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
+                    int index = 0;
+                    var hwMonitors = _wallpaperManager.GetMonitors();
+                    foreach (var m in _configMonitors)
+                    {
+                        if (_monitorWallpapers.TryGetValue(m.DeviceName, out string path) && !string.IsNullOrEmpty(path))
+                        {
+                            if (index < hwMonitors.Count)
+                            {
+                                _wallpaperManager.SetWallpaper(hwMonitors[index].DevicePath, path);
+                            }
+                        }
+                        index++;
+                    }
+                }
+                
+                MessageBox.Show("Wallpapers applied successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error applying wallpaper: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
