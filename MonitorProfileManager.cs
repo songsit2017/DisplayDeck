@@ -12,10 +12,45 @@ namespace DisplayManagerClone
 
     public class MonitorProfileManager
     {
-        private const string ProfileFileName = "monitor_profile.json";
+        private readonly string ProfilesDirectory;
+        public string LastActiveProfile { get; private set; }
 
-        public void SaveCurrentProfile()
+        public MonitorProfileManager()
         {
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            ProfilesDirectory = Path.Combine(appData, "DisplayManagerClone", "Profiles");
+            if (!Directory.Exists(ProfilesDirectory))
+            {
+                Directory.CreateDirectory(ProfilesDirectory);
+            }
+        }
+
+        public System.Collections.Generic.List<string> GetSavedProfiles()
+        {
+            var profiles = new System.Collections.Generic.List<string>();
+            if (Directory.Exists(ProfilesDirectory))
+            {
+                var files = Directory.GetFiles(ProfilesDirectory, "*.json");
+                foreach (var file in files)
+                {
+                    profiles.Add(Path.GetFileNameWithoutExtension(file));
+                }
+            }
+            return profiles;
+        }
+
+        private string GetProfilePath(string profileName)
+        {
+            // Sanitize file name
+            string safeName = string.Join("_", profileName.Split(Path.GetInvalidFileNameChars()));
+            return Path.Combine(ProfilesDirectory, $"{safeName}.json");
+        }
+
+        public void SaveCurrentProfile(string profileName)
+        {
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be empty.");
+
             int status = CCDNativeMethods.GetDisplayConfigBufferSizes(
                 CCDNativeMethods.QDC_ALL_PATHS,
                 out uint pathCount,
@@ -56,15 +91,17 @@ namespace DisplayManagerClone
 
             var options = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
             string json = JsonSerializer.Serialize(profile, options);
-            File.WriteAllText(ProfileFileName, json);
+            File.WriteAllText(GetProfilePath(profileName), json);
+            LastActiveProfile = profileName;
         }
 
-        public void RestoreProfile()
+        public void RestoreProfile(string profileName)
         {
-            if (!File.Exists(ProfileFileName))
-                throw new FileNotFoundException("No saved profile found. Please save a profile first.");
+            string path = GetProfilePath(profileName);
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Profile '{profileName}' not found.");
 
-            string json = File.ReadAllText(ProfileFileName);
+            string json = File.ReadAllText(path);
             var options = new JsonSerializerOptions { IncludeFields = true };
             var profile = JsonSerializer.Deserialize<MonitorProfileData>(json, options);
 
@@ -82,6 +119,17 @@ namespace DisplayManagerClone
 
             if (status != 0)
                 throw new Exception($"SetDisplayConfig failed with status {status}. The physical connections might have changed in a way that makes this topology invalid.");
+                
+            LastActiveProfile = profileName;
+        }
+        
+        public void DeleteProfile(string profileName)
+        {
+            string path = GetProfilePath(profileName);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
     }
 }

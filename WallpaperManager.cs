@@ -10,9 +10,10 @@ namespace DisplayManagerClone
         public string DevicePath { get; set; }
         public string DisplayName { get; set; }
         public string CurrentWallpaper { get; set; }
+        public NativeMethods.RECT Rect { get; set; }
     }
 
-    public class WallpaperManager
+    public class WallpaperManager : IDisposable
     {
         private IDesktopWallpaper _desktopWallpaper;
 
@@ -30,13 +31,17 @@ namespace DisplayManagerClone
             {
                 string devicePath = _desktopWallpaper.GetMonitorDevicePathAt(i);
                 string wallpaper = _desktopWallpaper.GetWallpaper(devicePath);
+                
+                NativeMethods.RECT rect = new NativeMethods.RECT();
+                _desktopWallpaper.GetMonitorRECT(devicePath, out rect);
 
                 monitors.Add(new MonitorInfo
                 {
                     Index = i,
                     DevicePath = devicePath,
                     DisplayName = $"Monitor {i + 1}",
-                    CurrentWallpaper = wallpaper
+                    CurrentWallpaper = wallpaper,
+                    Rect = rect
                 });
             }
 
@@ -60,7 +65,6 @@ namespace DisplayManagerClone
         {
             try
             {
-                // We don't set position here anymore, we let the UI decide
                 _desktopWallpaper.SetWallpaper(monitorDevicePath, imagePath);
             }
             catch (Exception ex)
@@ -79,6 +83,15 @@ namespace DisplayManagerClone
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to set position: {ex.Message}");
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_desktopWallpaper != null)
+            {
+                Marshal.ReleaseComObject(_desktopWallpaper);
+                _desktopWallpaper = null;
             }
         }
     }

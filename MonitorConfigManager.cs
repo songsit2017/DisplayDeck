@@ -46,6 +46,7 @@ namespace DisplayManagerClone
         {
             var monitors = new List<MonitorConfig>();
             uint id = 0;
+            int displayIndex = 1;
             NativeMethods.DISPLAY_DEVICE d = new NativeMethods.DISPLAY_DEVICE();
             d.cb = Marshal.SizeOf(d);
 
@@ -53,12 +54,30 @@ namespace DisplayManagerClone
             {
                 if ((d.StateFlags & 1) != 0) // DISPLAY_DEVICE_ATTACHED_TO_DESKTOP
                 {
+                    string adapterName = d.DeviceName;
+                    string displayName = d.DeviceString; // Fallback to GPU name
+
+                    NativeMethods.DISPLAY_DEVICE monitorDevice = new NativeMethods.DISPLAY_DEVICE();
+                    monitorDevice.cb = Marshal.SizeOf(monitorDevice);
+                    
+                    if (NativeMethods.EnumDisplayDevices(adapterName, 0, ref monitorDevice, 0))
+                    {
+                        if (!string.IsNullOrEmpty(monitorDevice.DeviceString))
+                        {
+                            displayName = monitorDevice.DeviceString;
+                        }
+                    }
+
+                    displayName = $"Display {displayIndex} ({displayName})";
+
                     var config = new MonitorConfig
                     {
-                        DeviceName = d.DeviceName,
-                        DisplayName = d.DeviceString,
+                        DeviceName = adapterName,
+                        DisplayName = displayName,
                         IsPrimary = (d.StateFlags & 4) != 0 // DISPLAY_DEVICE_PRIMARY_DEVICE
                     };
+
+                    displayIndex++;
 
                     NativeMethods.DEVMODE devMode = new NativeMethods.DEVMODE();
                     devMode.dmSize = (short)Marshal.SizeOf(devMode);
@@ -99,6 +118,8 @@ namespace DisplayManagerClone
 
         public void ApplySettings(List<MonitorConfig> monitors)
         {
+            var failedMonitors = new System.Collections.Generic.List<string>();
+
             foreach (var monitor in monitors)
             {
                 NativeMethods.DEVMODE devMode = new NativeMethods.DEVMODE();
@@ -111,7 +132,7 @@ namespace DisplayManagerClone
                     devMode.dmPelsWidth = monitor.CurrentResolution.Width;
                     devMode.dmPelsHeight = monitor.CurrentResolution.Height;
                     devMode.dmDisplayFrequency = monitor.CurrentResolution.Frequency;
-                    devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT;
+                    devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
 
                     uint flags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
                     if (monitor.IsPrimary)
@@ -119,12 +140,21 @@ namespace DisplayManagerClone
                         flags |= NativeMethods.CDS_SET_PRIMARY;
                     }
 
-                    NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
+                    int result = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
+                    if (result != NativeMethods.DISP_CHANGE_SUCCESSFUL)
+                    {
+                        failedMonitors.Add($"{monitor.DisplayName} (error code: {result})");
+                    }
                 }
             }
 
             // Apply all changes
             NativeMethods.ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+
+            if (failedMonitors.Count > 0)
+            {
+                throw new Exception($"Failed to apply settings for:\n{string.Join("\n", failedMonitors)}");
+            }
         }
     }
 }

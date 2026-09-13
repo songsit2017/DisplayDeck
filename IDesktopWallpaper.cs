@@ -23,13 +23,14 @@ namespace DisplayManagerClone
         string GetMonitorDevicePathAt(uint monitorIndex);
         
         uint GetMonitorDevicePathCount();
-        
-        void GetMonitorRECT([MarshalAs(UnmanagedType.LPWStr)] string monitorID, out NativeMethods.RECT displayRect);
-        
-        void SetBackgroundColor(uint color);
-        
-        uint GetBackgroundColor();
-        
+        [PreserveSig]
+        int GetMonitorRECT([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [Out] out NativeMethods.RECT displayRect);
+
+        [PreserveSig]
+        int SetBackgroundColor([In] uint color);
+
+        [PreserveSig]
+        int GetBackgroundColor([Out] out uint color);     
         void SetPosition(DesktopWallpaperPosition position);
         
         DesktopWallpaperPosition GetPosition();

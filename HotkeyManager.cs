@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Interop;
 
 namespace DisplayManagerClone
@@ -6,37 +7,51 @@ namespace DisplayManagerClone
     public class HotkeyManager : IDisposable
     {
         private HwndSource _source;
-        private int _hotkeyId = 9000;
-        private Action _onHotkeyPressed;
+        private int _currentHotkeyId = 9000;
+        private Dictionary<int, Action> _hotkeyActions = new Dictionary<int, Action>();
 
         public const uint MOD_ALT = 0x0001;
         public const uint MOD_CTRL = 0x0002;
         public const uint MOD_SHIFT = 0x0004;
         public const uint MOD_WIN = 0x0008;
         public const uint VK_RIGHT = 0x27;
+        public const uint VK_LEFT = 0x25;
+        public const uint VK_UP = 0x26;
+        public const uint VK_DOWN = 0x28;
         public const uint VK_X = 0x58;
+        public const uint VK_M = 0x4D;
+        public const uint VK_R = 0x52;
+        public const uint VK_C = 0x43;
+        public const uint VK_T = 0x54;
 
-        public HotkeyManager(IntPtr hwnd, Action onHotkeyPressed)
+        public HotkeyManager(IntPtr hwnd)
         {
-            _onHotkeyPressed = onHotkeyPressed;
             _source = HwndSource.FromHwnd(hwnd);
             _source.AddHook(HwndHook);
+        }
 
-            // Register Ctrl + Win + X
-            bool success = NativeMethods.RegisterHotKey(hwnd, _hotkeyId, MOD_CTRL | MOD_WIN, VK_X);
-            if (!success)
+        public bool RegisterHotkey(uint modifiers, uint key, Action action)
+        {
+            int id = ++_currentHotkeyId;
+            bool success = NativeMethods.RegisterHotKey(_source.Handle, id, modifiers, key);
+            if (success)
             {
-                System.Windows.MessageBox.Show("ไม่สามารถตั้งค่าคีย์ลัด Ctrl + Win + X ได้ (อาจมีโปรแกรมอื่นใช้งานอยู่)", "Warning", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                _hotkeyActions[id] = action;
             }
+            return success;
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
-            if (msg == WM_HOTKEY && wParam.ToInt32() == _hotkeyId)
+            if (msg == WM_HOTKEY)
             {
-                _onHotkeyPressed?.Invoke();
-                handled = true;
+                int id = wParam.ToInt32();
+                if (_hotkeyActions.TryGetValue(id, out Action action))
+                {
+                    action?.Invoke();
+                    handled = true;
+                }
             }
             return IntPtr.Zero;
         }
@@ -45,7 +60,10 @@ namespace DisplayManagerClone
         {
             if (_source != null)
             {
-                NativeMethods.UnregisterHotKey(_source.Handle, _hotkeyId);
+                foreach (var id in _hotkeyActions.Keys)
+                {
+                    NativeMethods.UnregisterHotKey(_source.Handle, id);
+                }
                 _source.RemoveHook(HwndHook);
                 _source = null;
             }
