@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DisplayManagerClone")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7f27071a6e32a781594f4db77a0aff29dbecbc0d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+990cc61d130c821a9d775c95ed5e9d68ecbd6d69")]
 [assembly: System.Reflection.AssemblyProductAttribute("DisplayManagerClone")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DisplayManagerClone")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

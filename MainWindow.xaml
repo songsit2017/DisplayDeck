@@ -86,7 +86,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     
-                    <CheckBox Grid.Row="0" Content="Allow DisplayManager to manage the Desktop Wallpaper" Margin="5" IsChecked="True" FontWeight="Bold"/>
+                    <CheckBox x:Name="ChkManageWallpaper" Grid.Row="0" Content="Allow DisplayManager to manage the Desktop Wallpaper" Margin="5" IsChecked="True" FontWeight="Bold" Checked="ChkManageWallpaper_CheckedChanged" Unchecked="ChkManageWallpaper_CheckedChanged"/>
                     
                     <!-- Monitor Preview Canvas -->
                     <Border Grid.Row="1" Background="#FF222222" Margin="5,10,5,10" BorderBrush="#FF444444" BorderThickness="1" CornerRadius="5">

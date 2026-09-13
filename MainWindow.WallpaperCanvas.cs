@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -9,6 +9,18 @@ namespace DisplayManagerClone
 {
     public partial class MainWindow : Window
     {
+        private void ChkManageWallpaper_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (WallpaperCanvas != null)
+            {
+                bool isManaged = ChkManageWallpaper.IsChecked == true;
+                WallpaperCanvas.IsEnabled = isManaged;
+                if (FindName("RbSameImage") is RadioButton rbSame) rbSame.IsEnabled = isManaged;
+                if (FindName("RbDifferentImage") is RadioButton rbDiff) rbDiff.IsEnabled = isManaged;
+                if (FindName("RbSpan") is RadioButton rbSpan) rbSpan.IsEnabled = isManaged;
+                if (FindName("TxtWallpaperSource") is TextBox txtBox) txtBox.IsEnabled = isManaged;
+            }
+        }
         private void DrawWallpaperCanvas()
         {
             if (WallpaperCanvas == null) return;
