@@ -29,3 +29,5 @@ C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-w
 C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-windows\ref\DisplayManagerClone.dll
 C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-windows\IdentifyWindow.baml
 C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-windows\IdentifyWindow.g.cs
+C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-windows\ColorPickerWindow.baml
+C:\Users\PUPU\.gemini\antigravity\scratch\DisplayManagerClone\obj\Debug\net8.0-windows\ColorPickerWindow.g.cs

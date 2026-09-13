@@ -74,6 +74,10 @@ namespace DisplayManagerClone
             }
         }
 
+                public void SetBackgroundColor(uint color)
+        {
+            _desktopWallpaper.SetBackgroundColor(color);
+        }
         public void SetPosition(DesktopWallpaperPosition position)
         {
             try

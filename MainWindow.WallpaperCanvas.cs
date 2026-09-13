@@ -111,41 +111,58 @@ namespace DisplayManagerClone
 
                 var rect = monitorRects[m.DeviceName];
                 
-                if (!string.IsNullOrEmpty(currentWallpaperPath) && System.IO.File.Exists(currentWallpaperPath))
+                if (!string.IsNullOrEmpty(currentWallpaperPath))
                 {
-                    try
+                    if (currentWallpaperPath.StartsWith("Solid Color"))
                     {
-                        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.UriSource = new Uri(currentWallpaperPath, UriKind.Absolute);
-                        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                        // Remove DecodePixelWidth so it doesn't get pixelated when spanning
-                        bitmap.EndInit();
-
-                        var imageBrush = new System.Windows.Media.ImageBrush(bitmap)
+                        uint color = _solidColor;
+                        if (currentWallpaperPath.StartsWith("Solid Color: #") && currentWallpaperPath.Length >= 20)
                         {
-                            Opacity = m == _selectedWallpaperMonitor ? 1.0 : 0.6
-                        };
-
-                        if (RbSpan.IsChecked == true)
-                        {
-                            imageBrush.Stretch = System.Windows.Media.Stretch.Fill;
-                            imageBrush.ViewboxUnits = System.Windows.Media.BrushMappingMode.RelativeToBoundingBox;
-                            imageBrush.Viewbox = new System.Windows.Rect(
-                                (double)(rect.X - minX) / totalWidth,
-                                (double)(rect.Y - minY) / totalHeight,
-                                (double)rect.Width / totalWidth,
-                                (double)rect.Height / totalHeight
-                            );
+                            if (uint.TryParse(currentWallpaperPath.Substring(14, 6), System.Globalization.NumberStyles.HexNumber, null, out uint rgb))
+                                color = rgb;
                         }
-                        else
-                        {
-                            imageBrush.Stretch = System.Windows.Media.Stretch.UniformToFill;
-                        }
-
-                        backgroundBrush = imageBrush;
+                        byte r = (byte)(color & 0xFF);
+                        byte g = (byte)((color >> 8) & 0xFF);
+                        byte b = (byte)((color >> 16) & 0xFF);
+                        var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+                        brush.Opacity = m == _selectedWallpaperMonitor ? 1.0 : 0.6;
+                        backgroundBrush = brush;
                     }
-                    catch { }
+                    else if (System.IO.File.Exists(currentWallpaperPath))
+                    {
+                        try
+                        {
+                            var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                            bitmap.BeginInit();
+                            bitmap.UriSource = new Uri(currentWallpaperPath, UriKind.Absolute);
+                            bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                            bitmap.EndInit();
+
+                            var imageBrush = new System.Windows.Media.ImageBrush(bitmap)
+                            {
+                                Opacity = m == _selectedWallpaperMonitor ? 1.0 : 0.6
+                            };
+
+                            if (RbSpan.IsChecked == true)
+                            {
+                                imageBrush.Stretch = System.Windows.Media.Stretch.Fill;
+                                imageBrush.ViewboxUnits = System.Windows.Media.BrushMappingMode.RelativeToBoundingBox;
+                                imageBrush.Viewbox = new System.Windows.Rect(
+                                    (double)(rect.X - minX) / totalWidth,
+                                    (double)(rect.Y - minY) / totalHeight,
+                                    (double)rect.Width / totalWidth,
+                                    (double)rect.Height / totalHeight
+                                );
+                            }
+                            else
+                            {
+                                imageBrush.Stretch = System.Windows.Media.Stretch.UniformToFill;
+                            }
+
+                            backgroundBrush = imageBrush;
+                        }
+                        catch { }
+                    }
                 }
 
                 Border border = new Border
@@ -355,6 +372,26 @@ namespace DisplayManagerClone
             }
         }
 
+        private uint _solidColor = 0x000000; // Black default
+
+        private void PickColor_Click(object sender, RoutedEventArgs e)
+        {
+            var picker = new ColorPickerWindow();
+            picker.Owner = this;
+            if (picker.ShowDialog() == true)
+            {
+                var c = picker.SelectedColor;
+                _solidColor = (uint)(c.R | (c.G << 8) | (c.B << 16));
+                
+                TxtWallpaperSource.Text = "Solid Color: #" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
+                
+                if (_selectedWallpaperMonitor != null)
+                {
+                    _monitorWallpapers[_selectedWallpaperMonitor.DeviceName] = TxtWallpaperSource.Text;
+                    DrawWallpaperCanvas();
+                }
+            }
+        }
         private void ChangeWallpaperSource_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedWallpaperMonitor == null)
@@ -545,3 +582,4 @@ namespace DisplayManagerClone
 
     }
 }
+
