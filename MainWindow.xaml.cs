@@ -379,7 +379,24 @@ namespace DisplayManagerClone
             int index = 1;
             foreach (var m in _configMonitors)
             {
-                var win = new IdentifyWindow(index.ToString(), m.X, m.Y, m.CurrentResolution.Width, m.CurrentResolution.Height);
+                double dpiScaleX = 1.0;
+                double dpiScaleY = 1.0;
+
+                try
+                {
+                    IntPtr hMon = WindowManager.FindMonitorByDeviceName(m.DeviceName);
+                    if (hMon != IntPtr.Zero)
+                    {
+                        if (NativeMethods.GetDpiForMonitor(hMon, NativeMethods.MDT_EFFECTIVE_DPI, out uint dpiX, out uint dpiY) == 0)
+                        {
+                            dpiScaleX = dpiX / 96.0;
+                            dpiScaleY = dpiY / 96.0;
+                        }
+                    }
+                }
+                catch { }
+
+                var win = new IdentifyWindow(index.ToString(), m.X, m.Y, m.CurrentResolution.Width, m.CurrentResolution.Height, dpiScaleX, dpiScaleY);
                 win.Show();
                 index++;
             }

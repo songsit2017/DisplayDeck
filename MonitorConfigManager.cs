@@ -36,6 +36,7 @@ namespace DisplayManagerClone
         public bool IsPrimary { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
+        public int Orientation { get; set; } // 0=0 deg, 1=90 deg, 2=180 deg, 3=270 deg
         public Resolution CurrentResolution { get; set; }
         public List<Resolution> SupportedResolutions { get; set; } = new List<Resolution>();
     }
@@ -86,6 +87,7 @@ namespace DisplayManagerClone
                     {
                         config.X = devMode.dmPositionX;
                         config.Y = devMode.dmPositionY;
+                        config.Orientation = devMode.dmDisplayOrientation;
                         config.CurrentResolution = new Resolution
                         {
                             Width = devMode.dmPelsWidth,
@@ -129,10 +131,11 @@ namespace DisplayManagerClone
                 {
                     devMode.dmPositionX = monitor.X;
                     devMode.dmPositionY = monitor.Y;
+                    devMode.dmDisplayOrientation = monitor.Orientation;
                     devMode.dmPelsWidth = monitor.CurrentResolution.Width;
                     devMode.dmPelsHeight = monitor.CurrentResolution.Height;
                     devMode.dmDisplayFrequency = monitor.CurrentResolution.Frequency;
-                    devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
+                    devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_DISPLAYORIENTATION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
 
                     uint flags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
                     if (monitor.IsPrimary)

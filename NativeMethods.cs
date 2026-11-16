@@ -64,6 +64,11 @@ namespace DisplayManagerClone
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern bool GetMonitorInfo(IntPtr hMonitor, MONITORINFO lpmi);
 
+        [DllImport("shcore.dll")]
+        public static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+        public const int MDT_EFFECTIVE_DPI = 0;
+
         public delegate bool MonitorEnumDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
 
         [DllImport("user32.dll")]
@@ -177,9 +182,15 @@ namespace DisplayManagerClone
         public const int DISP_CHANGE_SUCCESSFUL = 0;
         
         public const int DM_POSITION = 0x00000020;
+        public const int DM_DISPLAYORIENTATION = 0x00000080;
         public const int DM_PELSWIDTH = 0x00080000;
         public const int DM_PELSHEIGHT = 0x00100000;
         public const int DM_DISPLAYFREQUENCY = 0x00400000;
+
+        public const int DMDO_DEFAULT = 0;
+        public const int DMDO_90 = 1;
+        public const int DMDO_180 = 2;
+        public const int DMDO_270 = 3;
 
         // Window Rules Hook APIs
         public delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);

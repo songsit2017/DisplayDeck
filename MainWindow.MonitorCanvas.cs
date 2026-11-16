@@ -124,6 +124,8 @@ namespace DisplayManagerClone
             }
         }
 
+        private bool _isUpdatingOrientation = false;
+
         private void CmbConfigMonitors_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (CmbConfigMonitors.SelectedItem is MonitorConfig config)
@@ -131,6 +133,17 @@ namespace DisplayManagerClone
                 CmbResolutions.ItemsSource = config.SupportedResolutions;
                 CmbResolutions.SelectedItem = config.CurrentResolution;
                 ChkPrimary.IsChecked = config.IsPrimary;
+
+                _isUpdatingOrientation = true;
+                foreach (ComboBoxItem item in CmbOrientation.Items)
+                {
+                    if (item.Tag != null && int.TryParse(item.Tag.ToString(), out int orient) && orient == config.Orientation)
+                    {
+                        CmbOrientation.SelectedItem = item;
+                        break;
+                    }
+                }
+                _isUpdatingOrientation = false;
                 
                 _isUpdatingPos = true;
                 TxtPosX.Text = config.X.ToString();
@@ -138,6 +151,31 @@ namespace DisplayManagerClone
                 _isUpdatingPos = false;
                 
                 DrawMonitorCanvas();
+            }
+        }
+
+        private void CmbOrientation_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingOrientation) return;
+            if (CmbConfigMonitors.SelectedItem is MonitorConfig config && CmbOrientation.SelectedItem is ComboBoxItem item)
+            {
+                if (item.Tag != null && int.TryParse(item.Tag.ToString(), out int orient))
+                {
+                    bool wasFlipped = (config.Orientation == 1 || config.Orientation == 3);
+                    bool isNowFlipped = (orient == 1 || orient == 3);
+
+                    config.Orientation = orient;
+
+                    // If orientation swapped between Landscape and Portrait, swap resolution width and height if needed
+                    if (wasFlipped != isNowFlipped && config.CurrentResolution != null)
+                    {
+                        int temp = config.CurrentResolution.Width;
+                        config.CurrentResolution.Width = config.CurrentResolution.Height;
+                        config.CurrentResolution.Height = temp;
+                    }
+
+                    DrawMonitorCanvas();
+                }
             }
         }
 
