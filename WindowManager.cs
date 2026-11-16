@@ -6,13 +6,8 @@ namespace DisplayManagerClone
 {
     public class WindowManager
     {
-        public static void MoveActiveWindowToNextMonitor()
+        public static List<IntPtr> GetAllMonitorHandles()
         {
-            IntPtr hwnd = NativeMethods.GetForegroundWindow();
-            if (hwnd == IntPtr.Zero) return;
-
-            IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
-
             var monitors = new List<IntPtr>();
             NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
                 delegate (IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
@@ -20,6 +15,38 @@ namespace DisplayManagerClone
                     monitors.Add(hMonitor);
                     return true;
                 }, IntPtr.Zero);
+            return monitors;
+        }
+
+        public static IntPtr FindMonitorByDeviceName(string targetMonitorDeviceName)
+        {
+            if (string.IsNullOrEmpty(targetMonitorDeviceName)) return IntPtr.Zero;
+            IntPtr found = IntPtr.Zero;
+            NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
+                delegate (IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
+                {
+                    var info = new NativeMethods.MONITORINFOEX();
+                    if (NativeMethods.GetMonitorInfo(hMonitor, info))
+                    {
+                        if (string.Equals(info.szDevice, targetMonitorDeviceName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            found = hMonitor;
+                            return false;
+                        }
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            return found;
+        }
+
+        public static void MoveActiveWindowToNextMonitor()
+        {
+            IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return;
+
+            IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+
+            var monitors = GetAllMonitorHandles();
 
             if (monitors.Count <= 1) return;
 
@@ -37,21 +64,7 @@ namespace DisplayManagerClone
             if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(targetMonitorDeviceName)) return;
 
             IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
-            IntPtr nextMonitor = IntPtr.Zero;
-
-            NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
-                delegate (IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
-                {
-                    var info = new NativeMethods.MONITORINFOEX();
-                    if (NativeMethods.GetMonitorInfo(hMonitor, info))
-                    {
-                        if (string.Equals(info.szDevice, targetMonitorDeviceName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            nextMonitor = hMonitor;
-                        }
-                    }
-                    return true;
-                }, IntPtr.Zero);
+            IntPtr nextMonitor = FindMonitorByDeviceName(targetMonitorDeviceName);
 
             if (nextMonitor != IntPtr.Zero && currentMonitor != nextMonitor)
             {
@@ -107,13 +120,7 @@ namespace DisplayManagerClone
 
             IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
 
-            var monitors = new List<IntPtr>();
-            NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
-                delegate (IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
-                {
-                    monitors.Add(hMonitor);
-                    return true;
-                }, IntPtr.Zero);
+            var monitors = GetAllMonitorHandles();
 
             if (monitors.Count <= 1) return;
 
@@ -274,14 +281,9 @@ namespace DisplayManagerClone
             NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, NativeMethods.SWP_NOZORDER);
         }
 
-        public static void MoveWindowToPrimaryMonitor()
+        public static IntPtr GetPrimaryMonitorHandle()
         {
-            IntPtr hwnd = NativeMethods.GetForegroundWindow();
-            if (hwnd == IntPtr.Zero) return;
-
-            IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
             IntPtr primaryMonitor = IntPtr.Zero;
-
             NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
                 delegate (IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
                 {
@@ -291,10 +293,21 @@ namespace DisplayManagerClone
                         if ((info.dwFlags & 1) != 0) // MONITORINFOF_PRIMARY
                         {
                             primaryMonitor = hMonitor;
+                            return false;
                         }
                     }
                     return true;
                 }, IntPtr.Zero);
+            return primaryMonitor;
+        }
+
+        public static void MoveWindowToPrimaryMonitor()
+        {
+            IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return;
+
+            IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+            IntPtr primaryMonitor = GetPrimaryMonitorHandle();
 
             if (primaryMonitor != IntPtr.Zero && currentMonitor != primaryMonitor)
             {

@@ -167,7 +167,8 @@
                             <Button Content="Delete" Padding="10,2" Click="DeleteProfile_Click" Margin="0,0,15,0" VerticalAlignment="Center"/>
                             <TextBox x:Name="TxtProfileName" Width="100" Margin="0,0,5,0" VerticalAlignment="Center" ToolTip="Enter new profile name" />
                             <Button Content="Save New" Padding="10,2" Click="SaveLayout_Click" Margin="0,0,15,0" VerticalAlignment="Center" Background="#FF0078D7" Foreground="White" FontWeight="Bold"/>
-                            <CheckBox x:Name="ChkAutoRecovery" Content="Watchdog Auto-Recovery" VerticalAlignment="Center" Checked="ChkAutoRecovery_CheckedChanged" Unchecked="ChkAutoRecovery_CheckedChanged" ToolTip="Automatically restore last active profile on display change" />
+                            <CheckBox x:Name="ChkAutoRecovery" Content="Watchdog Auto-Recovery" VerticalAlignment="Center" Margin="0,0,15,0" Checked="ChkAutoRecovery_CheckedChanged" Unchecked="ChkAutoRecovery_CheckedChanged" ToolTip="Automatically restore last active profile on display change" />
+                            <CheckBox x:Name="ChkStartWithWindows" Content="Start with Windows" VerticalAlignment="Center" Checked="ChkStartWithWindows_CheckedChanged" Unchecked="ChkStartWithWindows_CheckedChanged" ToolTip="Launch this application automatically when Windows starts" />
                         </StackPanel>
                         
                         <Button Grid.Column="2" Content="Identify" Padding="20,5" Click="Identify_Click" FontWeight="Bold" Background="#FF333333" Foreground="White" />

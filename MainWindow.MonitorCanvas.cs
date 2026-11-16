@@ -217,13 +217,77 @@ namespace DisplayManagerClone
             }
         }
 
+        private void SnapToNearestEdge(MonitorConfig draggedConfig)
+        {
+            if (draggedConfig == null) return;
+            const int SNAP_THRESHOLD = 50; // physical pixels
+
+            foreach (var other in _configMonitors)
+            {
+                if (other == draggedConfig) continue;
+
+                int dragL = draggedConfig.X;
+                int dragR = draggedConfig.X + draggedConfig.CurrentResolution.Width;
+                int dragT = draggedConfig.Y;
+                int dragB = draggedConfig.Y + draggedConfig.CurrentResolution.Height;
+
+                int otherL = other.X;
+                int otherR = other.X + other.CurrentResolution.Width;
+                int otherT = other.Y;
+                int otherB = other.Y + other.CurrentResolution.Height;
+
+                // Snap right of dragged -> left of other
+                if (Math.Abs(dragR - otherL) < SNAP_THRESHOLD)
+                    draggedConfig.X = otherL - draggedConfig.CurrentResolution.Width;
+
+                // Snap left of dragged -> right of other
+                if (Math.Abs(dragL - otherR) < SNAP_THRESHOLD)
+                    draggedConfig.X = otherR;
+
+                // Snap bottom of dragged -> top of other
+                if (Math.Abs(dragB - otherT) < SNAP_THRESHOLD)
+                    draggedConfig.Y = otherT - draggedConfig.CurrentResolution.Height;
+
+                // Snap top of dragged -> bottom of other
+                if (Math.Abs(dragT - otherB) < SNAP_THRESHOLD)
+                    draggedConfig.Y = otherB;
+
+                // Snap top edge alignment (horizontal rows)
+                if (Math.Abs(dragT - otherT) < SNAP_THRESHOLD)
+                    draggedConfig.Y = otherT;
+
+                // Snap bottom edge alignment
+                if (Math.Abs(dragB - otherB) < SNAP_THRESHOLD)
+                    draggedConfig.Y = otherB - draggedConfig.CurrentResolution.Height;
+
+                // Snap left edge alignment (vertical columns)
+                if (Math.Abs(dragL - otherL) < SNAP_THRESHOLD)
+                    draggedConfig.X = otherL;
+
+                // Snap right edge alignment
+                if (Math.Abs(dragR - otherR) < SNAP_THRESHOLD)
+                    draggedConfig.X = otherR - draggedConfig.CurrentResolution.Width;
+            }
+        }
+
         private void MonitorCanvas_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (_draggingBorder != null)
             {
+                var draggedConfig = _draggingBorder.Tag as MonitorConfig;
                 _draggingBorder.ReleaseMouseCapture();
                 _draggingBorder = null;
-                // Optional: Snap to edges logic could go here
+
+                if (draggedConfig != null)
+                {
+                    SnapToNearestEdge(draggedConfig);
+
+                    _isUpdatingPos = true;
+                    TxtPosX.Text = draggedConfig.X.ToString();
+                    TxtPosY.Text = draggedConfig.Y.ToString();
+                    _isUpdatingPos = false;
+                }
+
                 DrawMonitorCanvas(); // redraw to snap and clean up
             }
         }

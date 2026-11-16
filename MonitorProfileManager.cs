@@ -13,12 +13,46 @@ namespace DisplayManagerClone
     public class MonitorProfileManager
     {
         private readonly string ProfilesDirectory;
-        public string LastActiveProfile { get; private set; }
+        private readonly string _lastActiveFile;
+
+        public string LastActiveProfile
+        {
+            get
+            {
+                try
+                {
+                    if (File.Exists(_lastActiveFile))
+                    {
+                        string profile = File.ReadAllText(_lastActiveFile).Trim();
+                        return string.IsNullOrEmpty(profile) ? null : profile;
+                    }
+                }
+                catch { }
+                return null;
+            }
+            set
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        if (File.Exists(_lastActiveFile)) File.Delete(_lastActiveFile);
+                    }
+                    else
+                    {
+                        File.WriteAllText(_lastActiveFile, value.Trim());
+                    }
+                }
+                catch { }
+            }
+        }
 
         public MonitorProfileManager()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            ProfilesDirectory = Path.Combine(appData, "DisplayManagerClone", "Profiles");
+            string baseFolder = Path.Combine(appData, "DisplayManagerClone");
+            ProfilesDirectory = Path.Combine(baseFolder, "Profiles");
+            _lastActiveFile = Path.Combine(baseFolder, "last_active_profile.txt");
             if (!Directory.Exists(ProfilesDirectory))
             {
                 Directory.CreateDirectory(ProfilesDirectory);

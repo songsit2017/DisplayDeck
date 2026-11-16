@@ -68,10 +68,60 @@ namespace DisplayManagerClone
             _watchdogTimer.Tick += WatchdogTimer_Tick;
             SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 
-            // Show window on startup for better visibility
-            this.WindowState = WindowState.Normal;
+            // Show window on startup for better visibility unless launched with --minimized
+            bool startMinimized = Environment.GetCommandLineArgs().Any(arg => string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
+            if (startMinimized)
+            {
+                this.WindowState = WindowState.Minimized;
+                this.Hide();
+            }
+            else
+            {
+                this.WindowState = WindowState.Normal;
+            }
             
+            LoadStartupState();
             LoadMonitors();
+        }
+
+        private const string STARTUP_REG_KEY = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        private const string APP_NAME = "DisplayManagerClone";
+
+        private void LoadStartupState()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(STARTUP_REG_KEY, false);
+                ChkStartWithWindows.IsChecked = key?.GetValue(APP_NAME) != null;
+            }
+            catch { }
+        }
+
+        private void ChkStartWithWindows_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(STARTUP_REG_KEY, true);
+                if (key != null)
+                {
+                    if (ChkStartWithWindows.IsChecked == true)
+                    {
+                        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                        if (!string.IsNullOrEmpty(exePath))
+                        {
+                            key.SetValue(APP_NAME, $"\"{exePath}\" --minimized");
+                        }
+                    }
+                    else
+                    {
+                        key.DeleteValue(APP_NAME, throwOnMissingValue: false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to update startup registry setting: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private HotkeyConfigManager _hotkeyConfigManager = new HotkeyConfigManager();
