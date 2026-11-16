@@ -392,6 +392,111 @@ namespace DisplayManagerClone
                 }
             }
         }
+        private string _slideshowFolderPath = null;
+        private System.Windows.Threading.DispatcherTimer _slideshowTimer = null;
+        private List<string> _slideshowImages = new List<string>();
+        private int _slideshowCurrentIndex = 0;
+        private Random _slideshowRandom = new Random();
+
+        private void ChooseSlideshowFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                ValidateNames = false,
+                CheckFileExists = false,
+                CheckPathExists = true,
+                FileName = "Select Folder",
+                Title = "Select Slideshow Images Folder"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string folder = System.IO.Path.GetDirectoryName(dialog.FileName);
+                if (!string.IsNullOrEmpty(folder) && System.IO.Directory.Exists(folder))
+                {
+                    _slideshowFolderPath = folder;
+                    TxtSlideshowFolder.Text = System.IO.Path.GetFileName(folder);
+                    TxtSlideshowFolder.ToolTip = folder;
+                }
+            }
+        }
+
+        private void StartSlideshow()
+        {
+            StopSlideshow();
+
+            if (string.IsNullOrEmpty(_slideshowFolderPath) || !System.IO.Directory.Exists(_slideshowFolderPath))
+            {
+                MessageBox.Show("Please choose a valid folder for slideshow images.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var validExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".bmp" };
+            _slideshowImages = System.IO.Directory.GetFiles(_slideshowFolderPath)
+                .Where(f => validExtensions.Contains(System.IO.Path.GetExtension(f)))
+                .ToList();
+
+            if (_slideshowImages.Count == 0)
+            {
+                MessageBox.Show("No valid image files found in the selected folder.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            int seconds = 1800;
+            if (CmbSlideshowInterval.SelectedItem is ComboBoxItem item && item.Tag != null)
+            {
+                if (int.TryParse(item.Tag.ToString(), out int sec)) seconds = sec;
+            }
+
+            _slideshowTimer = new System.Windows.Threading.DispatcherTimer();
+            _slideshowTimer.Interval = TimeSpan.FromSeconds(seconds);
+            _slideshowTimer.Tick += SlideshowTimer_Tick;
+
+            // Apply first image immediately
+            ApplyNextSlideshowImage();
+            _slideshowTimer.Start();
+        }
+
+        private void StopSlideshow()
+        {
+            if (_slideshowTimer != null)
+            {
+                _slideshowTimer.Stop();
+                _slideshowTimer = null;
+            }
+        }
+
+        private void SlideshowTimer_Tick(object sender, EventArgs e)
+        {
+            ApplyNextSlideshowImage();
+        }
+
+        private void ApplyNextSlideshowImage()
+        {
+            if (_slideshowImages == null || _slideshowImages.Count == 0) return;
+
+            string nextImage;
+            if (ChkSlideshowShuffle.IsChecked == true && _slideshowImages.Count > 1)
+            {
+                int nextIdx = _slideshowRandom.Next(_slideshowImages.Count);
+                if (nextIdx == _slideshowCurrentIndex) nextIdx = (nextIdx + 1) % _slideshowImages.Count;
+                _slideshowCurrentIndex = nextIdx;
+                nextImage = _slideshowImages[_slideshowCurrentIndex];
+            }
+            else
+            {
+                _slideshowCurrentIndex = (_slideshowCurrentIndex + 1) % _slideshowImages.Count;
+                nextImage = _slideshowImages[_slideshowCurrentIndex];
+            }
+
+            try
+            {
+                _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
+                _wallpaperManager.SetWallpaper(null, nextImage);
+            }
+            catch { }
+        }
+
         private void ChangeWallpaperSource_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedWallpaperMonitor == null)
@@ -418,6 +523,16 @@ namespace DisplayManagerClone
         {
             try
             {
+                if (RbSlideshow.IsChecked == true)
+                {
+                    StartSlideshow();
+                    MessageBox.Show("Wallpaper slideshow started successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // If not in slideshow mode, ensure background slideshow timer is stopped
+                StopSlideshow();
+
                 if (RbSpan.IsChecked == true)
                 {
                     _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);

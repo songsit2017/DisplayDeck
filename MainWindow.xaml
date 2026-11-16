@@ -119,6 +119,25 @@
                                 </StackPanel>
                                 <RadioButton x:Name="RbDifferentImage" Content="Different image for each monitor" IsChecked="True" Margin="0,2" Checked="BackgroundMode_Checked"/>
                                 <RadioButton x:Name="RbSameImage" Content="Same image on each monitor" Margin="0,2" Checked="BackgroundMode_Checked"/>
+                                <RadioButton x:Name="RbSlideshow" Content="Slideshow from folder" Margin="0,2" Checked="BackgroundMode_Checked"/>
+                                <StackPanel x:Name="PanelSlideshow" Margin="20,0,0,5" IsEnabled="{Binding IsChecked, ElementName=RbSlideshow}">
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <Button Content="Choose Folder..." Padding="5,2" Click="ChooseSlideshowFolder_Click" Margin="0,0,5,0"/>
+                                        <TextBlock x:Name="TxtSlideshowFolder" Text="(No folder chosen)" VerticalAlignment="Center" MaxWidth="120" TextTrimming="CharacterEllipsis" Foreground="Gray"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <TextBlock Text="Change Every:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <ComboBox x:Name="CmbSlideshowInterval" Width="80">
+                                            <ComboBoxItem Content="1 min" Tag="60" />
+                                            <ComboBoxItem Content="5 min" Tag="300" />
+                                            <ComboBoxItem Content="15 min" Tag="900" />
+                                            <ComboBoxItem Content="30 min" Tag="1800" IsSelected="True" />
+                                            <ComboBoxItem Content="1 hour" Tag="3600" />
+                                            <ComboBoxItem Content="1 day" Tag="86400" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <CheckBox x:Name="ChkSlideshowShuffle" Content="Shuffle Images" Margin="0,2" IsChecked="True"/>
+                                </StackPanel>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1" VerticalAlignment="Top">
