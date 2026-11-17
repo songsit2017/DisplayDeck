@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayManagerClone", "DisplayManagerClone.csproj", "{1E504FEC-A988-498F-A468-75CEBE9855EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayManagerClone.Tests", "..\DisplayManagerClone.Tests\DisplayManagerClone.Tests.csproj", "{08010545-DA6B-4878-8301-254CA20C7314}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayManagerClone.Tests", "DisplayManagerClone.Tests\DisplayManagerClone.Tests.csproj", "{08010545-DA6B-4878-8301-254CA20C7314}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
