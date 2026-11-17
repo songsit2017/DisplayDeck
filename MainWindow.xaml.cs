@@ -81,6 +81,7 @@ namespace DisplayManagerClone
             }
             
             LoadStartupState();
+            InitTitleBarButtons();
             LoadMonitors();
         }
 
@@ -151,8 +152,109 @@ namespace DisplayManagerClone
             LoadMonitors();
         }
 
+        private TitleBarOverlay _titleBarOverlay;
+        private IntPtr _foregroundHook = IntPtr.Zero;
+        private NativeMethods.WinEventDelegate _foregroundHookDelegate;
+        private DispatcherTimer _titleBarFollowTimer;
+        private IntPtr _lastForegroundHwnd = IntPtr.Zero;
+        private bool _isTitleBarButtonsEnabled = false;
+
+        private void InitTitleBarButtons()
+        {
+            _titleBarOverlay = new TitleBarOverlay();
+
+            _titleBarFollowTimer = new DispatcherTimer();
+            _titleBarFollowTimer.Interval = TimeSpan.FromMilliseconds(100);
+            _titleBarFollowTimer.Tick += (s, e) => UpdateTitleBarOverlayPosition();
+
+            _foregroundHookDelegate = new NativeMethods.WinEventDelegate(ForegroundEventProc);
+            _foregroundHook = NativeMethods.SetWinEventHook(
+                NativeMethods.EVENT_SYSTEM_FOREGROUND,
+                NativeMethods.EVENT_SYSTEM_FOREGROUND,
+                IntPtr.Zero,
+                _foregroundHookDelegate,
+                0,
+                0,
+                NativeMethods.WINEVENT_OUTOFCONTEXT | NativeMethods.WINEVENT_SKIPOWNPROCESS);
+        }
+
+        private void ChkTitleBarButtons_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            _isTitleBarButtonsEnabled = ChkTitleBarButtons.IsChecked == true;
+            if (_isTitleBarButtonsEnabled)
+            {
+                _titleBarFollowTimer?.Start();
+                UpdateTitleBarOverlayPosition();
+            }
+            else
+            {
+                _titleBarFollowTimer?.Stop();
+                _titleBarOverlay?.Hide();
+            }
+        }
+
+        private void ForegroundEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        {
+            if (!_isTitleBarButtonsEnabled) return;
+            Dispatcher.InvokeAsync(UpdateTitleBarOverlayPosition);
+        }
+
+        private void UpdateTitleBarOverlayPosition()
+        {
+            if (!_isTitleBarButtonsEnabled || _titleBarOverlay == null) return;
+
+            IntPtr fg = NativeMethods.GetForegroundWindow();
+            if (fg == IntPtr.Zero || !NativeMethods.IsWindowVisible(fg))
+            {
+                _titleBarOverlay.Hide();
+                return;
+            }
+
+            // Don't show on our own windows
+            IntPtr ourHwnd = new WindowInteropHelper(this).Handle;
+            IntPtr overlayHwnd = new WindowInteropHelper(_titleBarOverlay).Handle;
+            if (fg == ourHwnd || fg == overlayHwnd)
+            {
+                return;
+            }
+
+            NativeMethods.GetWindowRect(fg, out NativeMethods.RECT rect);
+            if (rect.Width <= 100 || rect.Height <= 50)
+            {
+                _titleBarOverlay.Hide();
+                return;
+            }
+
+            // Determine DPI of monitor containing the window
+            double dpiScale = 1.0;
+            IntPtr hMon = NativeMethods.MonitorFromWindow(fg, NativeMethods.MONITOR_DEFAULTTONEAREST);
+            if (hMon != IntPtr.Zero)
+            {
+                if (NativeMethods.GetDpiForMonitor(hMon, NativeMethods.MDT_EFFECTIVE_DPI, out uint dpiX, out _) == 0)
+                {
+                    dpiScale = dpiX / 96.0;
+                }
+            }
+            if (dpiScale <= 0) dpiScale = 1.0;
+
+            // Position: Top-right area next to minimize/maximize/close buttons
+            // Typically close/min/max buttons occupy about 140px on the right
+            double leftDip = (rect.right - 250) / dpiScale;
+            double topDip = (rect.top + 4) / dpiScale;
+
+            _lastForegroundHwnd = fg;
+            _titleBarOverlay.AttachTo(fg, leftDip, topDip);
+        }
+
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
+            if (_foregroundHook != IntPtr.Zero)
+            {
+                NativeMethods.UnhookWinEvent(_foregroundHook);
+                _foregroundHook = IntPtr.Zero;
+            }
+            _titleBarFollowTimer?.Stop();
+            _titleBarOverlay?.Close();
             _hotkeyManager?.Dispose();
             _windowRuleManager?.Dispose();
             TrayIcon?.Dispose();
