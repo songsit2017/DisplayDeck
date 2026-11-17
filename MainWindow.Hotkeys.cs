@@ -29,8 +29,8 @@ namespace DisplayManagerClone
                 {
                     if (config.Key != 0)
                     {
-                        Action action = GetActionFromId(config.ActionId);
-                        if (action != null)
+                        Action? action = GetActionFromId(config.ActionId);
+                        if (action != null && _hotkeyManager != null)
                         {
                             bool success = _hotkeyManager.RegisterHotkey(config.Modifiers, config.Key, action);
                             if (!success)
@@ -49,12 +49,18 @@ namespace DisplayManagerClone
                     MessageBox.Show($"The following hotkeys could not be registered because they are already in use by Windows or another application:\n\n{failedRegistrations}", "Hotkey Registration Failed", MessageBoxButton.OK, MessageBoxImage.Error);
                     
                     // Save the reverted configs
+                    if (_hotkeyConfigs != null)
+                    {
+                        if (_hotkeyConfigs != null)
+                {
                     _hotkeyConfigManager.SaveHotkeys(new System.Collections.Generic.List<HotkeyConfig>(_hotkeyConfigs));
+                }
+                    }
                 }
             }
         }
 
-        private Action GetActionFromId(string id)
+        private Action? GetActionFromId(string id)
         {
             switch (id)
             {
@@ -121,7 +127,7 @@ namespace DisplayManagerClone
             TxtHotkeyInput.Text = modsStr + keyStr;
         }
 
-        private string GetConflictWarning(uint modifiers, uint key)
+        private string? GetConflictWarning(uint modifiers, uint key)
         {
             var k = System.Windows.Input.KeyInterop.KeyFromVirtualKey((int)key);
             
@@ -174,7 +180,7 @@ namespace DisplayManagerClone
             {
                 if (_currentCapturedKey != 0)
                 {
-                    string warning = GetConflictWarning(_currentCapturedModifiers, _currentCapturedKey);
+                    string? warning = GetConflictWarning(_currentCapturedModifiers, _currentCapturedKey);
                     if (!string.IsNullOrEmpty(warning))
                     {
                         var result = MessageBox.Show(warning + "\n\nDo you still want to assign this hotkey?", "Potential Conflict", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -190,7 +196,13 @@ namespace DisplayManagerClone
                     config.Modifiers = _currentCapturedModifiers;
                     config.Key = _currentCapturedKey;
                     
+                    if (_hotkeyConfigs != null)
+                    {
+                        if (_hotkeyConfigs != null)
+                {
                     _hotkeyConfigManager.SaveHotkeys(new System.Collections.Generic.List<HotkeyConfig>(_hotkeyConfigs));
+                }
+                    }
                     LoadAndRegisterHotkeys(true); // Re-register all, show errors if any
                     
                     TxtHotkeyInput.Text = "Click here and press a key combo...";
@@ -215,7 +227,10 @@ namespace DisplayManagerClone
                 config.Modifiers = 0;
                 config.Key = 0;
                 
-                _hotkeyConfigManager.SaveHotkeys(new System.Collections.Generic.List<HotkeyConfig>(_hotkeyConfigs));
+                if (_hotkeyConfigs != null)
+                {
+                    _hotkeyConfigManager.SaveHotkeys(new System.Collections.Generic.List<HotkeyConfig>(_hotkeyConfigs));
+                }
                 LoadAndRegisterHotkeys(); // Re-register all
                 
                 TxtHotkeyInput.Text = "Click here and press a key combo...";

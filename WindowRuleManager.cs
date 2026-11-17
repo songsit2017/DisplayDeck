@@ -63,30 +63,41 @@ namespace DisplayManagerClone
             File.WriteAllText(_rulesFilePath, json);
         }
 
+        public static bool IsValidWindowCriteria(bool isVisible, IntPtr owner, int style, int exStyle, int width, int height)
+        {
+            if (!isVisible) return false;
+
+            // Must be a root / top-level window (not owned by another window)
+            if (owner != IntPtr.Zero) return false;
+
+            // Must not be a child control
+            if ((style & NativeMethods.WS_CHILD) != 0) return false;
+
+            // Tool windows (tooltips, floating toolbars, palettes) should be ignored
+            if ((exStyle & NativeMethods.WS_EX_TOOLWINDOW) != 0) return false;
+
+            // Check dimensions to ignore zero-size invisible helper windows
+            if (width < 100 || height < 100) return false;
+
+            return true;
+        }
+
         private bool IsApplicationMainWindow(IntPtr hwnd)
         {
             if (hwnd == IntPtr.Zero) return false;
             if (!NativeMethods.IsWindowVisible(hwnd)) return false;
 
-            // Must be a root / top-level window (not owned by another window)
             IntPtr owner = NativeMethods.GetWindow(hwnd, NativeMethods.GW_OWNER);
-            if (owner != IntPtr.Zero) return false;
-
             int style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_STYLE);
-            // Must not be a child control
-            if ((style & NativeMethods.WS_CHILD) != 0) return false;
-
             int exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-            // Tool windows (tooltips, floating toolbars, palettes) should be ignored
-            if ((exStyle & NativeMethods.WS_EX_TOOLWINDOW) != 0) return false;
-
-            // Check dimensions to ignore zero-size invisible helper windows
+            int width = 0, height = 0;
             if (NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
             {
-                if (rect.Width < 100 || rect.Height < 100) return false;
+                width = rect.Width;
+                height = rect.Height;
             }
 
-            return true;
+            return IsValidWindowCriteria(true, owner, style, exStyle, width, height);
         }
 
         private async void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
@@ -94,17 +105,23 @@ namespace DisplayManagerClone
             try
             {
                 if (idObject != NativeMethods.OBJID_WINDOW || hwnd == IntPtr.Zero) return;
-                if (!IsApplicationMainWindow(hwnd)) return;
 
-                string processName = GetProcessName(hwnd);
+                // Quick pre-filter: must be a visible, non-child, non-owned window
+                if (!NativeMethods.IsWindowVisible(hwnd)) return;
+                IntPtr owner = NativeMethods.GetWindow(hwnd, NativeMethods.GW_OWNER);
+                if (owner != IntPtr.Zero) return;
+                int style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_STYLE);
+                if ((style & NativeMethods.WS_CHILD) != 0) return;
+
+                string? processName = GetProcessName(hwnd);
                 if (string.IsNullOrEmpty(processName)) return;
 
                 var rule = Rules.FirstOrDefault(r => string.Equals(r.ProcessName, processName, StringComparison.OrdinalIgnoreCase));
                 if (rule != null)
                 {
-                    // Delay slightly to let the window fully initialize before moving
-                    await Task.Delay(100);
-                    if (NativeMethods.IsWindowVisible(hwnd))
+                    // Delay to let the window fully initialize (size, style) before final check
+                    await Task.Delay(150);
+                    if (IsApplicationMainWindow(hwnd))
                     {
                         WindowManager.MoveWindowToSpecificMonitor(hwnd, rule.TargetMonitorDeviceName);
                     }
@@ -116,7 +133,7 @@ namespace DisplayManagerClone
             }
         }
 
-        private string GetProcessName(IntPtr hwnd)
+        private string? GetProcessName(IntPtr hwnd)
         {
             NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
             if (pid == 0) return null;

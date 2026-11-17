@@ -57,8 +57,11 @@ public partial class App : Application
         // Non-UI Background Exceptions
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
-            Exception ex = args.ExceptionObject as Exception;
-            LogException("AppDomainUnhandledException", ex);
+            Exception? ex = args.ExceptionObject as Exception;
+            if (ex != null)
+            {
+                LogException("AppDomainUnhandledException", ex);
+            }
 
             MessageBox.Show($"A critical background error occurred:\n{ex?.Message}\n\nThe application will now close.", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
         };

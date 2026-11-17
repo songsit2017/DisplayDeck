@@ -7,6 +7,7 @@ namespace DisplayManagerClone
     public partial class TitleBarOverlay : Window
     {
         private IntPtr _targetHwnd = IntPtr.Zero;
+        public IntPtr TargetHwnd => _targetHwnd;
 
         public TitleBarOverlay()
         {

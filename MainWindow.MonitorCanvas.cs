@@ -48,7 +48,7 @@ namespace DisplayManagerClone
                 System.Windows.Media.Brush backgroundBrush = m == selectedConfig ? _primaryColor : _secondaryColor;
                 
                 // Try to load actual desktop wallpaper
-                string wallpaperPath = _wallpaperManager?.GetWallpaperForIndex(index - 1);
+                string? wallpaperPath = _wallpaperManager?.GetWallpaperForIndex(index - 1);
                 if (!string.IsNullOrEmpty(wallpaperPath) && System.IO.File.Exists(wallpaperPath))
                 {
                     try

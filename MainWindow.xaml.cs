@@ -6,19 +6,19 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
-using H.NotifyIcon;
+using Hardcodet.Wpf.TaskbarNotification;
 
 namespace DisplayManagerClone
 {
     public partial class MainWindow : Window
     {
-        private HotkeyManager _hotkeyManager;
-        private WallpaperManager _wallpaperManager;
+        private HotkeyManager? _hotkeyManager;
+        private WallpaperManager? _wallpaperManager;
         private MonitorProfileManager _profileManager = new MonitorProfileManager();
         private MonitorConfigManager _configManager = new MonitorConfigManager();
-        private WindowRuleManager _windowRuleManager;
+        private WindowRuleManager? _windowRuleManager;
         private System.Collections.Generic.List<MonitorConfig> _configMonitors = new System.Collections.Generic.List<MonitorConfig>();
-        private DispatcherTimer _watchdogTimer;
+        private DispatcherTimer? _watchdogTimer;
         private bool _isRestoring = false;
         private bool _isAutoRecoveryEnabled = false;
 
@@ -26,7 +26,7 @@ namespace DisplayManagerClone
         private double _canvasScale = 0.1;
         private double _canvasOffsetX = 0;
         private double _canvasOffsetY = 0;
-        private Border _draggingBorder = null;
+        private Border? _draggingBorder = null;
         private Point _dragStartPoint;
         private System.Windows.Media.Brush _primaryColor = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 215));
         private System.Windows.Media.Brush _secondaryColor = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 100));
@@ -35,7 +35,7 @@ namespace DisplayManagerClone
         public MainWindow()
         {
             InitializeComponent();
-            
+
             // Create a simple icon in memory to ensure TrayIcon is visible
             var bitmap = new System.Drawing.Bitmap(32, 32);
             using (var g = System.Drawing.Graphics.FromImage(bitmap))
@@ -44,8 +44,8 @@ namespace DisplayManagerClone
                 g.DrawString("DM", new System.Drawing.Font("Arial", 12, System.Drawing.FontStyle.Bold), System.Drawing.Brushes.White, new System.Drawing.PointF(0, 4));
             }
             IntPtr hIcon = bitmap.GetHicon();
-            TrayIcon.Icon = System.Drawing.Icon.FromHandle(hIcon);
-            NativeMethods.DestroyIcon(hIcon);
+            var icon = System.Drawing.Icon.FromHandle(hIcon);
+            TrayIcon.Icon = icon;
             bitmap.Dispose();
             
             this.StateChanged += MainWindow_StateChanged;
@@ -107,7 +107,7 @@ namespace DisplayManagerClone
                 {
                     if (ChkStartWithWindows.IsChecked == true)
                     {
-                        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                        string? exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
                         if (!string.IsNullOrEmpty(exePath))
                         {
                             key.SetValue(APP_NAME, $"\"{exePath}\" --minimized");
@@ -126,11 +126,11 @@ namespace DisplayManagerClone
         }
 
         private HotkeyConfigManager _hotkeyConfigManager = new HotkeyConfigManager();
-        private System.Collections.ObjectModel.ObservableCollection<HotkeyConfig> _hotkeyConfigs;
+        private System.Collections.ObjectModel.ObservableCollection<HotkeyConfig>? _hotkeyConfigs;
         private uint _currentCapturedModifiers;
         private uint _currentCapturedKey;
 
-        private void MainWindow_StateChanged(object sender, EventArgs e)
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
         {
             if (this.WindowState == WindowState.Minimized)
             {
@@ -138,7 +138,7 @@ namespace DisplayManagerClone
             }
         }
 
-        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
         {
             e.Cancel = true;
             this.WindowState = WindowState.Minimized;
@@ -152,10 +152,10 @@ namespace DisplayManagerClone
             LoadMonitors();
         }
 
-        private TitleBarOverlay _titleBarOverlay;
+        private TitleBarOverlay? _titleBarOverlay;
         private IntPtr _foregroundHook = IntPtr.Zero;
-        private NativeMethods.WinEventDelegate _foregroundHookDelegate;
-        private DispatcherTimer _titleBarFollowTimer;
+        private NativeMethods.WinEventDelegate? _foregroundHookDelegate;
+        private DispatcherTimer? _titleBarFollowTimer;
         private IntPtr _lastForegroundHwnd = IntPtr.Zero;
         private bool _isTitleBarButtonsEnabled = false;
 
@@ -316,7 +316,7 @@ namespace DisplayManagerClone
             }
         }
 
-        private MonitorConfig _selectedWallpaperMonitor;
+        private MonitorConfig? _selectedWallpaperMonitor;
         private System.Collections.Generic.Dictionary<string, string> _monitorWallpapers = new System.Collections.Generic.Dictionary<string, string>();
 
         private void WallpaperCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -376,7 +376,7 @@ namespace DisplayManagerClone
                     return;
                 }
 
-                string profileName = CmbProfiles.SelectedItem.ToString();
+                string profileName = CmbProfiles.SelectedItem.ToString()!;
                 _isRestoring = true;
                 _profileManager.RestoreProfile(profileName);
                 MessageBox.Show($"Display layout '{profileName}' restored successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -409,7 +409,7 @@ namespace DisplayManagerClone
                     return;
                 }
 
-                string profileName = CmbProfiles.SelectedItem.ToString();
+                string profileName = CmbProfiles.SelectedItem.ToString()!;
                 var result = MessageBox.Show($"Are you sure you want to delete profile '{profileName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.Yes)
                 {
@@ -428,24 +428,24 @@ namespace DisplayManagerClone
             _isAutoRecoveryEnabled = ChkAutoRecovery.IsChecked == true;
         }
 
-        private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+        private void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
         {
             if (!_isAutoRecoveryEnabled) return;
             if (_isRestoring) return;
             
             // Restart timer to debounce multiple rapid events
-            _watchdogTimer.Stop();
-            _watchdogTimer.Start();
+            _watchdogTimer?.Stop();
+            _watchdogTimer?.Start();
         }
 
-        private void WatchdogTimer_Tick(object sender, EventArgs e)
+        private void WatchdogTimer_Tick(object? sender, EventArgs e)
         {
-            _watchdogTimer.Stop();
+            _watchdogTimer?.Stop();
             if (!_isAutoRecoveryEnabled) return;
 
             try
             {
-                string profileToRestore = _profileManager.LastActiveProfile;
+                string? profileToRestore = _profileManager.LastActiveProfile;
                 if (string.IsNullOrEmpty(profileToRestore) && CmbProfiles.SelectedItem != null)
                 {
                     profileToRestore = CmbProfiles.SelectedItem.ToString();
@@ -455,7 +455,7 @@ namespace DisplayManagerClone
                 {
                     _isRestoring = true;
                     _profileManager.RestoreProfile(profileToRestore);
-                    TrayIcon?.ShowNotification("Watchdog Activated", $"Display change detected. Profile '{profileToRestore}' auto-restored!", H.NotifyIcon.Core.NotificationIcon.Info);
+                    TrayIcon?.ShowBalloonTip("Watchdog Activated", $"Display change detected. Profile '{profileToRestore}' auto-restored!", BalloonIcon.Info);
                 }
             }
             catch
@@ -535,11 +535,14 @@ namespace DisplayManagerClone
                 TargetMonitorDisplayName = selectedMonitor.DisplayName
             };
 
-            // Remove existing rule for same process
-            _windowRuleManager.Rules.RemoveAll(r => string.Equals(r.ProcessName, processName, StringComparison.OrdinalIgnoreCase));
-            
-            _windowRuleManager.Rules.Add(rule);
-            _windowRuleManager.SaveRules();
+            if (_windowRuleManager != null)
+            {
+                // Remove existing rule for same process
+                _windowRuleManager.Rules.RemoveAll(r => string.Equals(r.ProcessName, processName, StringComparison.OrdinalIgnoreCase));
+                
+                _windowRuleManager.Rules.Add(rule);
+                _windowRuleManager.SaveRules();
+            }
 
             TxtRuleProcess.Clear();
             RefreshRulesList();
@@ -547,7 +550,7 @@ namespace DisplayManagerClone
 
         private void RemoveRule_Click(object sender, RoutedEventArgs e)
         {
-            if (LstRules.SelectedItem is WindowRule rule)
+            if (LstRules.SelectedItem is WindowRule rule && _windowRuleManager != null)
             {
                 _windowRuleManager.Rules.Remove(rule);
                 _windowRuleManager.SaveRules();
@@ -558,7 +561,7 @@ namespace DisplayManagerClone
         private void RefreshRulesList()
         {
             LstRules.ItemsSource = null;
-            LstRules.ItemsSource = _windowRuleManager.Rules;
+            LstRules.ItemsSource = _windowRuleManager?.Rules;
         }
     }
 }

@@ -14,7 +14,7 @@ namespace DisplayManagerClone
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IDesktopWallpaper
     {
-        void SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
+        void SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string? monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
         
         [return: MarshalAs(UnmanagedType.LPWStr)]
         string GetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID);

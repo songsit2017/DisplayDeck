@@ -7,15 +7,15 @@ namespace DisplayManagerClone
     public class MonitorInfo
     {
         public uint Index { get; set; }
-        public string DevicePath { get; set; }
-        public string DisplayName { get; set; }
-        public string CurrentWallpaper { get; set; }
+        public string DevicePath { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string CurrentWallpaper { get; set; } = string.Empty;
         public NativeMethods.RECT Rect { get; set; }
     }
 
     public class WallpaperManager : IDisposable
     {
-        private IDesktopWallpaper _desktopWallpaper;
+        private IDesktopWallpaper? _desktopWallpaper;
 
         public WallpaperManager()
         {
@@ -25,6 +25,7 @@ namespace DisplayManagerClone
         public List<MonitorInfo> GetMonitors()
         {
             var monitors = new List<MonitorInfo>();
+            if (_desktopWallpaper == null) return monitors;
             uint count = _desktopWallpaper.GetMonitorDevicePathCount();
 
             for (uint i = 0; i < count; i++)
@@ -48,10 +49,11 @@ namespace DisplayManagerClone
             return monitors;
         }
 
-        public string GetWallpaperForIndex(int index)
+        public string? GetWallpaperForIndex(int index)
         {
             try
             {
+                if (_desktopWallpaper == null) return null;
                 string devicePath = _desktopWallpaper.GetMonitorDevicePathAt((uint)index);
                 return _desktopWallpaper.GetWallpaper(devicePath);
             }
@@ -61,11 +63,11 @@ namespace DisplayManagerClone
             }
         }
 
-        public void SetWallpaper(string monitorDevicePath, string imagePath)
+        public void SetWallpaper(string? monitorDevicePath, string imagePath)
         {
             try
             {
-                _desktopWallpaper.SetWallpaper(monitorDevicePath, imagePath);
+                _desktopWallpaper?.SetWallpaper(monitorDevicePath, imagePath);
             }
             catch (Exception ex)
             {
@@ -74,14 +76,14 @@ namespace DisplayManagerClone
             }
         }
 
-                public void SetBackgroundColor(uint color)
+        public void SetBackgroundColor(uint color)
         {
-            _desktopWallpaper.SetBackgroundColor(color);
+            _desktopWallpaper?.SetBackgroundColor(color);
         }
 
         public void SetPosition(DesktopWallpaperPosition position)
         {
-            _desktopWallpaper.SetPosition(position);
+            _desktopWallpaper?.SetPosition(position);
         }
 
         public void Dispose()

@@ -75,7 +75,7 @@ namespace DisplayManagerClone
             double offsetY = (availableHeight - (totalHeight * scale)) / 2 - (minY * scale);
 
             // Determine global wallpaper path for Span or Same modes
-            string globalWallpaperPath = null;
+            string? globalWallpaperPath = null;
             if ((RbSpan.IsChecked == true || RbSameImage.IsChecked == true) && _monitorWallpapers.Count > 0)
             {
                 if (_selectedWallpaperMonitor != null && _monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
@@ -94,7 +94,7 @@ namespace DisplayManagerClone
             {
                 System.Windows.Media.Brush backgroundBrush = m == _selectedWallpaperMonitor ? _primaryColor : _secondaryColor;
                 
-                string currentWallpaperPath = globalWallpaperPath;
+                string? currentWallpaperPath = globalWallpaperPath;
                 if (RbDifferentImage.IsChecked == true)
                 {
                     if (_monitorWallpapers.ContainsKey(m.DeviceName))
@@ -203,11 +203,11 @@ namespace DisplayManagerClone
         }
 
         private bool _isDraggingMonitor = false;
-        private Border _draggedBorder = null;
+        private Border? _draggedBorder = null;
 
         private void WallpaperCanvas_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            Border clickedBorder = null;
+            Border? clickedBorder = null;
             if (e.OriginalSource is FrameworkElement fe && fe.Parent is Border border && border.Tag is MonitorConfig config)
             {
                 clickedBorder = border;
@@ -235,7 +235,7 @@ namespace DisplayManagerClone
                     }
                 }
 
-                if (_monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
+                if (_selectedWallpaperMonitor != null && _monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
                     TxtWallpaperSource.Text = _monitorWallpapers[_selectedWallpaperMonitor.DeviceName];
                 else
                     TxtWallpaperSource.Text = "Solid Color";
@@ -275,7 +275,7 @@ namespace DisplayManagerClone
         {
             if (RbSpan.IsChecked != true) return;
 
-            Border targetBorder = null;
+            Border? targetBorder = null;
             if (e.OriginalSource is FrameworkElement fe && fe.Parent is Border border && border.Tag is MonitorConfig)
             {
                 targetBorder = border;
@@ -392,8 +392,8 @@ namespace DisplayManagerClone
                 }
             }
         }
-        private string _slideshowFolderPath = null;
-        private System.Windows.Threading.DispatcherTimer _slideshowTimer = null;
+        private string? _slideshowFolderPath = null;
+        private System.Windows.Threading.DispatcherTimer? _slideshowTimer = null;
         private List<string> _slideshowImages = new List<string>();
         private int _slideshowCurrentIndex = 0;
         private Random _slideshowRandom = new Random();
@@ -411,7 +411,7 @@ namespace DisplayManagerClone
 
             if (dialog.ShowDialog() == true)
             {
-                string folder = System.IO.Path.GetDirectoryName(dialog.FileName);
+                string? folder = System.IO.Path.GetDirectoryName(dialog.FileName);
                 if (!string.IsNullOrEmpty(folder) && System.IO.Directory.Exists(folder))
                 {
                     _slideshowFolderPath = folder;
@@ -466,7 +466,7 @@ namespace DisplayManagerClone
             }
         }
 
-        private void SlideshowTimer_Tick(object sender, EventArgs e)
+        private void SlideshowTimer_Tick(object? sender, EventArgs e)
         {
             ApplyNextSlideshowImage();
         }
@@ -491,8 +491,8 @@ namespace DisplayManagerClone
 
             try
             {
-                _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
-                _wallpaperManager.SetWallpaper(null, nextImage);
+                _wallpaperManager?.SetPosition(DesktopWallpaperPosition.Fill);
+                _wallpaperManager?.SetWallpaper(null, nextImage);
             }
             catch { }
         }
@@ -535,10 +535,10 @@ namespace DisplayManagerClone
 
                 if (RbSpan.IsChecked == true)
                 {
-                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
+                    _wallpaperManager?.SetPosition(DesktopWallpaperPosition.Fill);
                     if (_monitorWallpapers.Count > 0)
                     {
-                        string pathToApply = null;
+                        string? pathToApply = null;
                         if (_selectedWallpaperMonitor != null && _monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
                             pathToApply = _monitorWallpapers[_selectedWallpaperMonitor.DeviceName];
                         else
@@ -555,10 +555,10 @@ namespace DisplayManagerClone
                 }
                 else if (RbSameImage.IsChecked == true)
                 {
-                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
+                    _wallpaperManager?.SetPosition(DesktopWallpaperPosition.Fill);
                     if (_monitorWallpapers.Count > 0)
                     {
-                        string pathToApply = null;
+                        string? pathToApply = null;
                         if (_selectedWallpaperMonitor != null && _monitorWallpapers.ContainsKey(_selectedWallpaperMonitor.DeviceName))
                             pathToApply = _monitorWallpapers[_selectedWallpaperMonitor.DeviceName];
                         else
@@ -569,28 +569,28 @@ namespace DisplayManagerClone
 
                         if (!string.IsNullOrEmpty(pathToApply))
                         {
-                            _wallpaperManager.SetWallpaper(null, pathToApply);
+                            _wallpaperManager?.SetWallpaper(null, pathToApply);
                         }
                     }
                 }
                 else // Different image per monitor
                 {
-                    _wallpaperManager.SetPosition(DesktopWallpaperPosition.Fill);
-                    var hwMonitors = _wallpaperManager.GetMonitors();
+                    _wallpaperManager?.SetPosition(DesktopWallpaperPosition.Fill);
+                    var hwMonitors = _wallpaperManager?.GetMonitors() ?? new List<MonitorInfo>();
                     foreach (var m in _configMonitors)
                     {
-                        if (_monitorWallpapers.TryGetValue(m.DeviceName, out string path) && !string.IsNullOrEmpty(path))
+                        if (_monitorWallpapers.TryGetValue(m.DeviceName, out string? path) && !string.IsNullOrEmpty(path))
                         {
                             var matchedHw = hwMonitors.Find(hw => hw.Rect.left == m.X && hw.Rect.top == m.Y);
                             if (matchedHw == null)
                             {
                                 int fallbackIndex = _configMonitors.IndexOf(m);
-                                if (fallbackIndex < hwMonitors.Count) matchedHw = hwMonitors[fallbackIndex];
+                                if (fallbackIndex >= 0 && fallbackIndex < hwMonitors.Count) matchedHw = hwMonitors[fallbackIndex];
                             }
                             
                             if (matchedHw != null)
                             {
-                                _wallpaperManager.SetWallpaper(matchedHw.DevicePath, path);
+                                _wallpaperManager?.SetWallpaper(matchedHw.DevicePath, path);
                             }
                         }
                     }
@@ -645,17 +645,17 @@ namespace DisplayManagerClone
                 double offsetX = (scaledWidth - totalWidth) / 2;
                 double offsetY = (scaledHeight - totalHeight) / 2;
 
-                var hwMonitors = _wallpaperManager.GetMonitors();
+                var hwMonitors = _wallpaperManager?.GetMonitors() ?? new List<MonitorInfo>();
 
                 foreach (var b in borders)
                 {
-                    MonitorConfig m = b.Tag as MonitorConfig;
+                    if (b.Tag is not MonitorConfig m) continue;
                     var matchedHw = hwMonitors.Find(hw => hw.Rect.left == m.X && hw.Rect.top == m.Y);
                     
                     if (matchedHw == null)
                     {
                         int fallbackIndex = _configMonitors.IndexOf(m);
-                        if (fallbackIndex < hwMonitors.Count) matchedHw = hwMonitors[fallbackIndex];
+                        if (fallbackIndex >= 0 && fallbackIndex < hwMonitors.Count) matchedHw = hwMonitors[fallbackIndex];
                     }
 
                     if (matchedHw == null) continue;
@@ -686,7 +686,7 @@ namespace DisplayManagerClone
                         encoder.Save(fs);
                     }
 
-                    _wallpaperManager.SetWallpaper(matchedHw.DevicePath, tempPath);
+                    _wallpaperManager?.SetWallpaper(matchedHw.DevicePath, tempPath);
                 }
             }
             catch (Exception ex)

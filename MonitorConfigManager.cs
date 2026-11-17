@@ -16,7 +16,7 @@ namespace DisplayManagerClone
             return $"{Width} x {Height} @ {Frequency}Hz";
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Resolution r)
                 return Width == r.Width && Height == r.Height && Frequency == r.Frequency;
@@ -31,18 +31,25 @@ namespace DisplayManagerClone
 
     public class MonitorConfig
     {
-        public string DeviceName { get; set; }
-        public string DisplayName { get; set; }
+        public string DeviceName { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
         public bool IsPrimary { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public int Orientation { get; set; } // 0=0 deg, 1=90 deg, 2=180 deg, 3=270 deg
-        public Resolution CurrentResolution { get; set; }
+        public Resolution CurrentResolution { get; set; } = new Resolution();
         public List<Resolution> SupportedResolutions { get; set; } = new List<Resolution>();
     }
 
+    public delegate int ChangeDisplaySettingsHandler(string? deviceName, ref NativeMethods.DEVMODE devMode, IntPtr hwnd, uint flags, IntPtr lParam);
+    public delegate int ChangeDisplaySettingsCommitHandler(string? deviceName, IntPtr devMode, IntPtr hwnd, uint flags, IntPtr lParam);
+    public delegate bool EnumDisplaySettingsHandler(string? deviceName, int modeNum, ref NativeMethods.DEVMODE devMode);
+
     public class MonitorConfigManager
     {
+        public ChangeDisplaySettingsHandler ChangeDisplaySettingsFunc { get; set; } = NativeMethods.ChangeDisplaySettingsEx;
+        public ChangeDisplaySettingsCommitHandler ChangeDisplaySettingsCommitFunc { get; set; } = (dev, ptr, hwnd, flags, param) => NativeMethods.ChangeDisplaySettingsEx(dev, ptr, hwnd, flags, param);
+        public EnumDisplaySettingsHandler EnumDisplaySettingsFunc { get; set; } = NativeMethods.EnumDisplaySettings;
         public List<MonitorConfig> GetMonitors()
         {
             var monitors = new List<MonitorConfig>();
@@ -121,15 +128,24 @@ namespace DisplayManagerClone
         public void ApplySettings(List<MonitorConfig> monitors)
         {
             var devModes = new Dictionary<MonitorConfig, NativeMethods.DEVMODE>();
+            var originalDevModes = new Dictionary<MonitorConfig, NativeMethods.DEVMODE>();
             var testFailures = new List<string>();
 
-            // Phase 1: Prepare and Test settings for each monitor (CDS_TEST)
+            // Phase 1: Capture originals + Prepare and Test settings for each monitor (CDS_TEST)
             foreach (var monitor in monitors)
             {
+                // Save the original DEVMODE for rollback
+                NativeMethods.DEVMODE originalDevMode = new NativeMethods.DEVMODE();
+                originalDevMode.dmSize = (short)Marshal.SizeOf(originalDevMode);
+                if (EnumDisplaySettingsFunc(monitor.DeviceName, NativeMethods.ENUM_CURRENT_SETTINGS, ref originalDevMode))
+                {
+                    originalDevModes[monitor] = originalDevMode;
+                }
+
                 NativeMethods.DEVMODE devMode = new NativeMethods.DEVMODE();
                 devMode.dmSize = (short)Marshal.SizeOf(devMode);
 
-                if (!NativeMethods.EnumDisplaySettings(monitor.DeviceName, NativeMethods.ENUM_CURRENT_SETTINGS, ref devMode))
+                if (!EnumDisplaySettingsFunc(monitor.DeviceName, NativeMethods.ENUM_CURRENT_SETTINGS, ref devMode))
                 {
                     testFailures.Add($"{monitor.DisplayName}: Failed to query current display mode.");
                     continue;
@@ -149,7 +165,7 @@ namespace DisplayManagerClone
                     testFlags |= NativeMethods.CDS_SET_PRIMARY;
                 }
 
-                int testResult = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, testFlags, IntPtr.Zero);
+                int testResult = ChangeDisplaySettingsFunc(monitor.DeviceName, ref devMode, IntPtr.Zero, testFlags, IntPtr.Zero);
                 if (testResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
                 {
                     testFailures.Add($"{monitor.DisplayName}: Resolution/mode not supported (test error: {testResult})");
@@ -167,7 +183,8 @@ namespace DisplayManagerClone
             }
 
             // Phase 2: Stage settings in registry (CDS_UPDATEREGISTRY | CDS_NORESET)
-            var stageFailures = new List<string>();
+            var stagedMonitors = new List<MonitorConfig>();
+            string? stageError = null;
             foreach (var kvp in devModes)
             {
                 var monitor = kvp.Key;
@@ -179,23 +196,48 @@ namespace DisplayManagerClone
                     flags |= NativeMethods.CDS_SET_PRIMARY;
                 }
 
-                int stageResult = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
+                int stageResult = ChangeDisplaySettingsFunc(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
                 if (stageResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
                 {
-                    stageFailures.Add($"{monitor.DisplayName} (staging error: {stageResult})");
+                    stageError = $"{monitor.DisplayName} (staging error: {stageResult})";
+                    break; // Stop staging, need rollback
                 }
+                stagedMonitors.Add(monitor);
             }
 
-            if (stageFailures.Count > 0)
+            if (stageError != null)
             {
-                throw new Exception($"Failed to stage settings for:\n{string.Join("\n", stageFailures)}");
+                // Rollback: re-stage original DEVMODE for every monitor that was successfully staged
+                foreach (var monitor in stagedMonitors)
+                {
+                    if (originalDevModes.TryGetValue(monitor, out var origDev))
+                    {
+                        var rollbackDev = origDev; // copy the struct
+                        rollbackDev.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_DISPLAYORIENTATION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
+                        uint rollbackFlags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
+                        ChangeDisplaySettingsFunc(monitor.DeviceName, ref rollbackDev, IntPtr.Zero, rollbackFlags, IntPtr.Zero);
+                    }
+                }
+                throw new Exception($"Failed to stage settings for {stageError}. All staged changes have been rolled back.");
             }
 
             // Phase 3: Final Commit
-            int finalResult = NativeMethods.ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+            int finalResult = ChangeDisplaySettingsCommitFunc(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
             if (finalResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
             {
-                throw new Exception($"Final display settings commit failed with code {finalResult}.");
+                // Final commit failed — rollback all monitors to originals
+                foreach (var kvp in originalDevModes)
+                {
+                    var monitor = kvp.Key;
+                    var origDev = kvp.Value;
+                    var rollbackDev = origDev;
+                    rollbackDev.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_DISPLAYORIENTATION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
+                    uint rollbackFlags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
+                    ChangeDisplaySettingsFunc(monitor.DeviceName, ref rollbackDev, IntPtr.Zero, rollbackFlags, IntPtr.Zero);
+                }
+                // Re-commit the rolled-back originals
+                ChangeDisplaySettingsCommitFunc(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+                throw new Exception($"Final display settings commit failed with code {finalResult}. Original settings have been restored.");
             }
         }
     }

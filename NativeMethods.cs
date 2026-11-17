@@ -53,7 +53,7 @@ namespace DisplayManagerClone
         public class MONITORINFOEX : MONITORINFO
         {
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string szDevice;
+            public string szDevice = string.Empty;
 
             public MONITORINFOEX()
             {
@@ -174,16 +174,16 @@ namespace DisplayManagerClone
         }
 
         [DllImport("user32.dll")]
-        public static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+        public static extern bool EnumDisplayDevices(string? lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
 
         [DllImport("user32.dll")]
-        public static extern bool EnumDisplaySettings(string deviceName, int modeNum, ref DEVMODE devMode);
+        public static extern bool EnumDisplaySettings(string? deviceName, int modeNum, ref DEVMODE devMode);
 
         [DllImport("user32.dll")]
-        public static extern int ChangeDisplaySettingsEx(string lpszDeviceName, ref DEVMODE lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
+        public static extern int ChangeDisplaySettingsEx(string? lpszDeviceName, ref DEVMODE lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
         
         [DllImport("user32.dll")]
-        public static extern int ChangeDisplaySettingsEx(string lpszDeviceName, IntPtr lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
+        public static extern int ChangeDisplaySettingsEx(string? lpszDeviceName, IntPtr lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
 
         public const int ENUM_CURRENT_SETTINGS = -1;
         public const uint CDS_UPDATEREGISTRY = 0x01;

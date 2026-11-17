@@ -6,7 +6,7 @@ namespace DisplayManagerClone
 {
     public class HotkeyManager : IDisposable
     {
-        private HwndSource _source;
+        private HwndSource? _source;
         private int _currentHotkeyId = 9000;
         private Dictionary<int, Action> _hotkeyActions = new Dictionary<int, Action>();
 
@@ -27,11 +27,12 @@ namespace DisplayManagerClone
         public HotkeyManager(IntPtr hwnd)
         {
             _source = HwndSource.FromHwnd(hwnd);
-            _source.AddHook(HwndHook);
+            _source?.AddHook(HwndHook);
         }
 
         public bool RegisterHotkey(uint modifiers, uint key, Action action)
         {
+            if (_source == null) return false;
             int id = ++_currentHotkeyId;
             bool success = NativeMethods.RegisterHotKey(_source.Handle, id, modifiers, key);
             if (success)
@@ -47,7 +48,7 @@ namespace DisplayManagerClone
             if (msg == WM_HOTKEY)
             {
                 int id = wParam.ToInt32();
-                if (_hotkeyActions.TryGetValue(id, out Action action))
+                if (_hotkeyActions.TryGetValue(id, out Action? action))
                 {
                     action?.Invoke();
                     handled = true;

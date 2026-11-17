@@ -10,8 +10,8 @@ namespace DisplayManagerClone
         private uint _modifiers;
         private uint _key;
 
-        public string ActionId { get; set; }
-        public string ActionName { get; set; }
+        public string ActionId { get; set; } = string.Empty;
+        public string ActionName { get; set; } = string.Empty;
 
         public uint Modifiers
         {
@@ -48,8 +48,8 @@ namespace DisplayManagerClone
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

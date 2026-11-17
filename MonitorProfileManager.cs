@@ -7,8 +7,8 @@ namespace DisplayManagerClone
     public class MonitorProfileData
     {
         public string ProfileName { get; set; } = string.Empty;
-        public CCDNativeMethods.DISPLAYCONFIG_PATH_INFO[] Paths { get; set; }
-        public CCDNativeMethods.DISPLAYCONFIG_MODE_INFO[] Modes { get; set; }
+        public CCDNativeMethods.DISPLAYCONFIG_PATH_INFO[] Paths { get; set; } = Array.Empty<CCDNativeMethods.DISPLAYCONFIG_PATH_INFO>();
+        public CCDNativeMethods.DISPLAYCONFIG_MODE_INFO[] Modes { get; set; } = Array.Empty<CCDNativeMethods.DISPLAYCONFIG_MODE_INFO>();
     }
 
     public class MonitorProfileManager
@@ -16,7 +16,7 @@ namespace DisplayManagerClone
         private readonly string ProfilesDirectory;
         private readonly string _lastActiveFile;
 
-        public string LastActiveProfile
+        public string? LastActiveProfile
         {
             get
             {
@@ -109,7 +109,11 @@ namespace DisplayManagerClone
             // Sanitize readable portion
             char[] invalidChars = Path.GetInvalidFileNameChars();
             string sanitized = new string(trimmed.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
-            if (ReservedWindowsNames.Contains(sanitized) || sanitized.Length > 30)
+
+            // Check the stem (part before the first dot) against Windows reserved device names.
+            // Windows treats "CON", "CON.txt", "CON.anything" etc. as reserved.
+            string stem = sanitized.Contains('.') ? sanitized.Substring(0, sanitized.IndexOf('.')) : sanitized;
+            if (ReservedWindowsNames.Contains(stem) || sanitized.Length > 30)
             {
                 sanitized = "profile";
             }
