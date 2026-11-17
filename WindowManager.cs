@@ -42,6 +42,11 @@ namespace DisplayManagerClone
         public static void MoveActiveWindowToNextMonitor()
         {
             IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            MoveWindowToNextMonitor(hwnd);
+        }
+
+        public static void MoveWindowToNextMonitor(IntPtr hwnd)
+        {
             if (hwnd == IntPtr.Zero) return;
 
             IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
@@ -116,6 +121,11 @@ namespace DisplayManagerClone
         public static void MoveActiveWindowToPreviousMonitor()
         {
             IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            MoveWindowToPreviousMonitor(hwnd);
+        }
+
+        public static void MoveWindowToPreviousMonitor(IntPtr hwnd)
+        {
             if (hwnd == IntPtr.Zero) return;
 
             IntPtr currentMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
@@ -209,6 +219,11 @@ namespace DisplayManagerClone
         public static void ToggleWindowAlwaysOnTop()
         {
             IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            ToggleWindowAlwaysOnTop(hwnd);
+        }
+
+        public static void ToggleWindowAlwaysOnTop(IntPtr hwnd)
+        {
             if (hwnd == IntPtr.Zero) return;
 
             int exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);

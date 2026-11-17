@@ -63,12 +63,38 @@ namespace DisplayManagerClone
             File.WriteAllText(_rulesFilePath, json);
         }
 
+        private bool IsApplicationMainWindow(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return false;
+            if (!NativeMethods.IsWindowVisible(hwnd)) return false;
+
+            // Must be a root / top-level window (not owned by another window)
+            IntPtr owner = NativeMethods.GetWindow(hwnd, NativeMethods.GW_OWNER);
+            if (owner != IntPtr.Zero) return false;
+
+            int style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_STYLE);
+            // Must not be a child control
+            if ((style & NativeMethods.WS_CHILD) != 0) return false;
+
+            int exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+            // Tool windows (tooltips, floating toolbars, palettes) should be ignored
+            if ((exStyle & NativeMethods.WS_EX_TOOLWINDOW) != 0) return false;
+
+            // Check dimensions to ignore zero-size invisible helper windows
+            if (NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
+            {
+                if (rect.Width < 100 || rect.Height < 100) return false;
+            }
+
+            return true;
+        }
+
         private async void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             try
             {
                 if (idObject != NativeMethods.OBJID_WINDOW || hwnd == IntPtr.Zero) return;
-                if (!NativeMethods.IsWindowVisible(hwnd)) return;
+                if (!IsApplicationMainWindow(hwnd)) return;
 
                 string processName = GetProcessName(hwnd);
                 if (string.IsNullOrEmpty(processName)) return;
@@ -78,7 +104,10 @@ namespace DisplayManagerClone
                 {
                     // Delay slightly to let the window fully initialize before moving
                     await Task.Delay(100);
-                    WindowManager.MoveWindowToSpecificMonitor(hwnd, rule.TargetMonitorDeviceName);
+                    if (NativeMethods.IsWindowVisible(hwnd))
+                    {
+                        WindowManager.MoveWindowToSpecificMonitor(hwnd, rule.TargetMonitorDeviceName);
+                    }
                 }
             }
             catch (Exception ex)

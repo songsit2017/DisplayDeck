@@ -78,16 +78,10 @@ namespace DisplayManagerClone
         {
             _desktopWallpaper.SetBackgroundColor(color);
         }
+
         public void SetPosition(DesktopWallpaperPosition position)
         {
-            try
-            {
-                _desktopWallpaper.SetPosition(position);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to set position: {ex.Message}");
-            }
+            _desktopWallpaper.SetPosition(position);
         }
 
         public void Dispose()

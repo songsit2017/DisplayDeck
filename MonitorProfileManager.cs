@@ -6,6 +6,7 @@ namespace DisplayManagerClone
 {
     public class MonitorProfileData
     {
+        public string ProfileName { get; set; } = string.Empty;
         public CCDNativeMethods.DISPLAYCONFIG_PATH_INFO[] Paths { get; set; }
         public CCDNativeMethods.DISPLAYCONFIG_MODE_INFO[] Modes { get; set; }
     }
@@ -59,6 +60,13 @@ namespace DisplayManagerClone
             }
         }
 
+        private static readonly HashSet<string> ReservedWindowsNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+
         public System.Collections.Generic.List<string> GetSavedProfiles()
         {
             var profiles = new System.Collections.Generic.List<string>();
@@ -67,17 +75,83 @@ namespace DisplayManagerClone
                 var files = Directory.GetFiles(ProfilesDirectory, "*.json");
                 foreach (var file in files)
                 {
+                    try
+                    {
+                        string json = File.ReadAllText(file);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("ProfileName", out var nameProp) && !string.IsNullOrWhiteSpace(nameProp.GetString()))
+                        {
+                            profiles.Add(nameProp.GetString()!);
+                            continue;
+                        }
+                    }
+                    catch { }
+
+                    // Fallback to legacy file name without extension
                     profiles.Add(Path.GetFileNameWithoutExtension(file));
                 }
             }
-            return profiles;
+            return profiles.Distinct().ToList();
+        }
+
+        public static string GetSafeProfileFileName(string profileName)
+        {
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be empty.");
+
+            string trimmed = profileName.Trim();
+
+            // Hash to guarantee distinct, clash-free, and collision-free file paths for any unicode/special string
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(trimmed.ToLowerInvariant()));
+            string hashPrefix = Convert.ToHexString(hash).Substring(0, 16);
+
+            // Sanitize readable portion
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            string sanitized = new string(trimmed.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
+            if (ReservedWindowsNames.Contains(sanitized) || sanitized.Length > 30)
+            {
+                sanitized = "profile";
+            }
+
+            return $"{sanitized}_{hashPrefix}.json";
         }
 
         private string GetProfilePath(string profileName)
         {
-            // Sanitize file name
-            string safeName = string.Join("_", profileName.Split(Path.GetInvalidFileNameChars()));
-            return Path.Combine(ProfilesDirectory, $"{safeName}.json");
+            if (string.IsNullOrWhiteSpace(profileName))
+                throw new ArgumentException("Profile name cannot be empty.");
+
+            string newFormatPath = Path.Combine(ProfilesDirectory, GetSafeProfileFileName(profileName));
+            if (File.Exists(newFormatPath)) return newFormatPath;
+
+            // Check if profile exists by reading ProfileName inside JSON files
+            if (Directory.Exists(ProfilesDirectory))
+            {
+                foreach (var file in Directory.GetFiles(ProfilesDirectory, "*.json"))
+                {
+                    try
+                    {
+                        string json = File.ReadAllText(file);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("ProfileName", out var nameProp))
+                        {
+                            if (string.Equals(nameProp.GetString(), profileName.Trim(), StringComparison.OrdinalIgnoreCase))
+                            {
+                                return file;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // Check legacy file name match
+                string legacySafe = string.Join("_", profileName.Split(Path.GetInvalidFileNameChars()));
+                string legacyPath = Path.Combine(ProfilesDirectory, $"{legacySafe}.json");
+                if (File.Exists(legacyPath)) return legacyPath;
+            }
+
+            return newFormatPath;
         }
 
         public void SaveCurrentProfile(string profileName)
@@ -119,6 +193,7 @@ namespace DisplayManagerClone
 
             var profile = new MonitorProfileData
             {
+                ProfileName = profileName.Trim(),
                 Paths = paths,
                 Modes = modes
             };

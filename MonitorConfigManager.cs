@@ -120,43 +120,82 @@ namespace DisplayManagerClone
 
         public void ApplySettings(List<MonitorConfig> monitors)
         {
-            var failedMonitors = new System.Collections.Generic.List<string>();
+            var devModes = new Dictionary<MonitorConfig, NativeMethods.DEVMODE>();
+            var testFailures = new List<string>();
 
+            // Phase 1: Prepare and Test settings for each monitor (CDS_TEST)
             foreach (var monitor in monitors)
             {
                 NativeMethods.DEVMODE devMode = new NativeMethods.DEVMODE();
                 devMode.dmSize = (short)Marshal.SizeOf(devMode);
-                
-                if (NativeMethods.EnumDisplaySettings(monitor.DeviceName, NativeMethods.ENUM_CURRENT_SETTINGS, ref devMode))
+
+                if (!NativeMethods.EnumDisplaySettings(monitor.DeviceName, NativeMethods.ENUM_CURRENT_SETTINGS, ref devMode))
                 {
-                    devMode.dmPositionX = monitor.X;
-                    devMode.dmPositionY = monitor.Y;
-                    devMode.dmDisplayOrientation = monitor.Orientation;
-                    devMode.dmPelsWidth = monitor.CurrentResolution.Width;
-                    devMode.dmPelsHeight = monitor.CurrentResolution.Height;
-                    devMode.dmDisplayFrequency = monitor.CurrentResolution.Frequency;
-                    devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_DISPLAYORIENTATION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
+                    testFailures.Add($"{monitor.DisplayName}: Failed to query current display mode.");
+                    continue;
+                }
 
-                    uint flags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
-                    if (monitor.IsPrimary)
-                    {
-                        flags |= NativeMethods.CDS_SET_PRIMARY;
-                    }
+                devMode.dmPositionX = monitor.X;
+                devMode.dmPositionY = monitor.Y;
+                devMode.dmDisplayOrientation = monitor.Orientation;
+                devMode.dmPelsWidth = monitor.CurrentResolution.Width;
+                devMode.dmPelsHeight = monitor.CurrentResolution.Height;
+                devMode.dmDisplayFrequency = monitor.CurrentResolution.Frequency;
+                devMode.dmFields = NativeMethods.DM_POSITION | NativeMethods.DM_DISPLAYORIENTATION | NativeMethods.DM_PELSWIDTH | NativeMethods.DM_PELSHEIGHT | NativeMethods.DM_DISPLAYFREQUENCY;
 
-                    int result = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
-                    if (result != NativeMethods.DISP_CHANGE_SUCCESSFUL)
-                    {
-                        failedMonitors.Add($"{monitor.DisplayName} (error code: {result})");
-                    }
+                uint testFlags = NativeMethods.CDS_TEST;
+                if (monitor.IsPrimary)
+                {
+                    testFlags |= NativeMethods.CDS_SET_PRIMARY;
+                }
+
+                int testResult = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, testFlags, IntPtr.Zero);
+                if (testResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
+                {
+                    testFailures.Add($"{monitor.DisplayName}: Resolution/mode not supported (test error: {testResult})");
+                }
+                else
+                {
+                    devModes[monitor] = devMode;
                 }
             }
 
-            // Apply all changes
-            NativeMethods.ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
-
-            if (failedMonitors.Count > 0)
+            // If any monitor failed validation, abort completely without applying partial changes
+            if (testFailures.Count > 0)
             {
-                throw new Exception($"Failed to apply settings for:\n{string.Join("\n", failedMonitors)}");
+                throw new Exception($"Validation failed for one or more monitors. No changes were applied:\n{string.Join("\n", testFailures)}");
+            }
+
+            // Phase 2: Stage settings in registry (CDS_UPDATEREGISTRY | CDS_NORESET)
+            var stageFailures = new List<string>();
+            foreach (var kvp in devModes)
+            {
+                var monitor = kvp.Key;
+                var devMode = kvp.Value;
+
+                uint flags = NativeMethods.CDS_UPDATEREGISTRY | NativeMethods.CDS_NORESET;
+                if (monitor.IsPrimary)
+                {
+                    flags |= NativeMethods.CDS_SET_PRIMARY;
+                }
+
+                int stageResult = NativeMethods.ChangeDisplaySettingsEx(monitor.DeviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
+                if (stageResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
+                {
+                    stageFailures.Add($"{monitor.DisplayName} (staging error: {stageResult})");
+                }
+            }
+
+            if (stageFailures.Count > 0)
+            {
+                throw new Exception($"Failed to stage settings for:\n{string.Join("\n", stageFailures)}");
+            }
+
+            // Phase 3: Final Commit
+            int finalResult = NativeMethods.ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+            if (finalResult != NativeMethods.DISP_CHANGE_SUCCESSFUL)
+            {
+                throw new Exception($"Final display settings commit failed with code {finalResult}.");
             }
         }
     }

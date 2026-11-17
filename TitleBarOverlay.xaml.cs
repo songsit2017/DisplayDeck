@@ -39,7 +39,7 @@ namespace DisplayManagerClone
         {
             if (_targetHwnd != IntPtr.Zero && NativeMethods.IsWindowVisible(_targetHwnd))
             {
-                WindowManager.MoveActiveWindowToPreviousMonitor();
+                WindowManager.MoveWindowToPreviousMonitor(_targetHwnd);
             }
         }
 
@@ -47,7 +47,7 @@ namespace DisplayManagerClone
         {
             if (_targetHwnd != IntPtr.Zero && NativeMethods.IsWindowVisible(_targetHwnd))
             {
-                WindowManager.MoveActiveWindowToNextMonitor();
+                WindowManager.MoveWindowToNextMonitor(_targetHwnd);
             }
         }
 
@@ -55,7 +55,7 @@ namespace DisplayManagerClone
         {
             if (_targetHwnd != IntPtr.Zero && NativeMethods.IsWindowVisible(_targetHwnd))
             {
-                WindowManager.ToggleWindowAlwaysOnTop();
+                WindowManager.ToggleWindowAlwaysOnTop(_targetHwnd);
             }
         }
     }
