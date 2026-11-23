@@ -162,6 +162,8 @@ namespace DisplayManagerClone
         private void InitTitleBarButtons()
         {
             _titleBarOverlay = new TitleBarOverlay();
+            ChkSnapOnMaximizeHover.IsChecked = Equals(
+                Registry.GetValue(@"HKEY_CURRENT_USER\Software\DisplayDeck", "SnapOnMaximizeHover", 0), 1);
 
             _titleBarFollowTimer = new DispatcherTimer();
             _titleBarFollowTimer.Interval = TimeSpan.FromMilliseconds(100);
@@ -176,6 +178,21 @@ namespace DisplayManagerClone
                 0,
                 0,
                 NativeMethods.WINEVENT_OUTOFCONTEXT | NativeMethods.WINEVENT_SKIPOWNPROCESS);
+        }
+
+        private void ChkSnapOnMaximizeHover_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_titleBarOverlay == null) return;
+            bool enabled = ChkSnapOnMaximizeHover.IsChecked == true;
+            _titleBarOverlay.SetMaximizeHoverEnabled(enabled);
+            try
+            {
+                Registry.SetValue(@"HKEY_CURRENT_USER\Software\DisplayDeck", "SnapOnMaximizeHover", enabled ? 1 : 0);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceWarning("Could not save the Maximize hover setting: {0}", ex.Message);
+            }
         }
 
         private void ChkTitleBarButtons_CheckedChanged(object sender, RoutedEventArgs e)

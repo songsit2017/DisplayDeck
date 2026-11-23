@@ -15,6 +15,22 @@ namespace DisplayManagerClone
         public static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT point);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr WindowFromPoint(POINT point);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+        [DllImport("user32.dll", EntryPoint = "SendMessageTimeoutW")]
+        public static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint message, IntPtr wParam,
+            IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int key);
+
+        [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
 
         public const uint MONITOR_DEFAULTTONULL = 0;

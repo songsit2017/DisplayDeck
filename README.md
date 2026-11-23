@@ -25,6 +25,8 @@ dotnet run --project DisplayManagerClone.csproj
 
 ## Installer and updates
 
+To use DisplayDeck's multi-monitor picker from a supported window's Maximize button, enable **Snap on Maximize hover** in DisplayDeck. In Windows **Settings → System → Multitasking → Snap windows**, uncheck only **Show snap layouts when I hover over a window's maximize button** to prevent both menus from appearing. Apps with custom caption buttons may require the existing TitleBar Buttons picker.
+
 Download `DisplayDeck-win-Setup.exe` from [GitHub Releases](https://github.com/songsit2017/DisplayDeck/releases). The installer includes the complete Windows x64 app and its .NET runtime. Installed copies check for updates on startup and every six hours, download them in the background, and apply them when you select **Exit** from the tray menu.
 
 To package a release on Windows, run `./Build-Installer.ps1 -Version 1.0.1` with an unused version. Upload the setup executable, full `.nupkg` and `releases.win.json` together to the corresponding GitHub release. Publish stable releases only when they are ready for installed copies to pick them up.
