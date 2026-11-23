@@ -5,9 +5,12 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
         ResizeMode="NoResize" ShowActivated="False" Focusable="False"
-        Height="28" Width="100">
+        Height="28" Width="132">
     <Border Background="#E62D2D30" CornerRadius="4" BorderBrush="#FF0078D7" BorderThickness="1" Padding="2" Margin="1">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Button x:Name="BtnSnap" Content="▥" ToolTip="Snap to a zone on any monitor"
+                    AutomationProperties.Name="Snap across monitors" Width="28" Height="22" Margin="1,0"
+                    Background="#FF3E3E42" Foreground="White" BorderThickness="0" Click="BtnSnap_Click"/>
             <Button x:Name="BtnPrevMonitor" Content="◀" ToolTip="Move Window to Previous Monitor"
                     Width="28" Height="22" Margin="1,0" FontSize="11" FontWeight="Bold"
                     Background="#FF3E3E42" Foreground="White" BorderThickness="0"
