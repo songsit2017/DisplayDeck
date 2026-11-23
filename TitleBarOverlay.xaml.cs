@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace DisplayManagerClone
 {
@@ -13,17 +14,81 @@ namespace DisplayManagerClone
         public IntPtr TargetHwnd => _targetHwnd;
         private readonly Popup _snapPicker = new() { StaysOpen = false, AllowsTransparency = true };
         public bool IsSnapPickerOpen => _snapPicker.IsOpen;
+        private readonly DispatcherTimer _hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+        private IntPtr _hoverTarget;
+        private long _hoverSince;
+        private long _lastNearPicker;
+        private bool _openedByHover;
 
         public TitleBarOverlay()
         {
             InitializeComponent();
             _snapPicker.PlacementTarget = BtnSnap;
-            IsVisibleChanged += (_, _) => { if (!IsVisible) _snapPicker.IsOpen = false; };
+            IsVisibleChanged += (_, _) => { if (!IsVisible && !_openedByHover) _snapPicker.IsOpen = false; };
+            _hoverTimer.Tick += CheckMaximizeHover;
+            Closed += (_, _) => { _hoverTimer.Stop(); _snapPicker.IsOpen = false; };
         }
 
-        private void BtnSnap_Click(object sender, RoutedEventArgs e)
+        public void SetMaximizeHoverEnabled(bool enabled)
         {
-            var target = _targetHwnd;
+            if (enabled) _hoverTimer.Start();
+            else
+            {
+                _hoverTimer.Stop();
+                _hoverTarget = IntPtr.Zero;
+                if (_openedByHover) _snapPicker.IsOpen = false;
+            }
+        }
+
+        private static bool IsOverMaximize(IntPtr target)
+        {
+            if (target == IntPtr.Zero || !NativeMethods.GetCursorPos(out var point)) return false;
+            var underCursor = NativeMethods.WindowFromPoint(point);
+            const uint rootWindow = 2;
+            if (underCursor != target && NativeMethods.GetAncestor(underCursor, rootWindow) != target) return false;
+
+            const uint hitTestMessage = 0x0084;
+            const uint abortIfHung = 0x0002;
+            const int maximizeButton = 9;
+            int position = (point.x & 0xffff) | ((point.y & 0xffff) << 16);
+            return NativeMethods.SendMessageTimeout(target, hitTestMessage, IntPtr.Zero,
+                new IntPtr(position), abortIfHung, 30, out var hit) != IntPtr.Zero && hit.ToInt64() == maximizeButton;
+        }
+
+        private void CheckMaximizeHover(object? sender, EventArgs e)
+        {
+            var target = NativeMethods.GetForegroundWindow();
+            NativeMethods.GetWindowThreadProcessId(target, out uint pid);
+            long now = Environment.TickCount64;
+            bool overMaximize = pid != 0 && pid != (uint)Environment.ProcessId && IsOverMaximize(target);
+            const int leftMouseButton = 1;
+            bool mouseDown = NativeMethods.GetAsyncKeyState(leftMouseButton) < 0;
+
+            if (_snapPicker.IsOpen)
+            {
+                if (!_openedByHover) return;
+                bool overPicker = _snapPicker.Child?.IsMouseOver == true;
+                if (overMaximize || overPicker) _lastNearPicker = now;
+                if ((mouseDown && !overPicker) || (!overPicker && target != _hoverTarget) || now - _lastNearPicker > 450)
+                {
+                    _snapPicker.IsOpen = false;
+                    _hoverTarget = IntPtr.Zero;
+                }
+                return;
+            }
+
+            if (!overMaximize || mouseDown) { _hoverTarget = IntPtr.Zero; return; }
+            if (_hoverTarget != target) { _hoverTarget = target; _hoverSince = now; return; }
+            if (now - _hoverSince < 450) return;
+            _lastNearPicker = now;
+            ShowSnapPicker(target, fromHover: true);
+            _hoverSince = now;
+        }
+
+        private void BtnSnap_Click(object sender, RoutedEventArgs e) => ShowSnapPicker(_targetHwnd, fromHover: false);
+
+        private void ShowSnapPicker(IntPtr target, bool fromHover)
+        {
             var monitors = WindowManager.GetAllMonitorHandles()
                 .Select(handle => (Handle: handle, Info: new NativeMethods.MONITORINFO()))
                 .Where(m => NativeMethods.GetMonitorInfo(m.Handle, m.Info) && m.Info.rcWork.Width > 0 && m.Info.rcWork.Height > 0)
@@ -66,6 +131,11 @@ namespace DisplayManagerClone
             }
 
             _snapPicker.Child = new Border { Background = Brushes.WhiteSmoke, Padding = new Thickness(8), Child = map };
+            _openedByHover = fromHover;
+            _snapPicker.StaysOpen = fromHover;
+            _snapPicker.PlacementTarget = fromHover ? null : BtnSnap;
+            _snapPicker.Placement = fromHover ? PlacementMode.MousePoint : PlacementMode.Bottom;
+            _snapPicker.VerticalOffset = fromHover ? 8 : 0;
             _snapPicker.IsOpen = true;
         }
 

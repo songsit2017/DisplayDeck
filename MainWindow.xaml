@@ -189,6 +189,7 @@
                             <CheckBox x:Name="ChkAutoRecovery" Content="Watchdog Auto-Recovery" VerticalAlignment="Center" Margin="0,0,15,0" Checked="ChkAutoRecovery_CheckedChanged" Unchecked="ChkAutoRecovery_CheckedChanged" ToolTip="Automatically restore last active profile on display change" />
                             <CheckBox x:Name="ChkStartWithWindows" Content="Start with Windows" VerticalAlignment="Center" Margin="0,0,15,0" Checked="ChkStartWithWindows_CheckedChanged" Unchecked="ChkStartWithWindows_CheckedChanged" ToolTip="Launch this application automatically when Windows starts" />
                             <CheckBox x:Name="ChkTitleBarButtons" Content="TitleBar Buttons" VerticalAlignment="Center" Checked="ChkTitleBarButtons_CheckedChanged" Unchecked="ChkTitleBarButtons_CheckedChanged" ToolTip="Show quick window management buttons on the title bar of active windows" />
+                            <CheckBox x:Name="ChkSnapOnMaximizeHover" Content="Snap on Maximize hover" Margin="10,0,0,0" VerticalAlignment="Center" Checked="ChkSnapOnMaximizeHover_Changed" Unchecked="ChkSnapOnMaximizeHover_Changed" ToolTip="Show DisplayDeck's monitor layout when hovering over a supported Maximize button" />
                         </StackPanel>
                         
                         <Button Grid.Column="2" Content="Identify" Padding="20,5" Click="Identify_Click" FontWeight="Bold" Background="#FF333333" Foreground="White" />
