@@ -100,9 +100,9 @@ namespace DisplayManagerClone
                 @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
                 "AppsUseLightTheme", 1), 0);
             bool highContrast = SystemParameters.HighContrast;
-            static Brush Shade(byte value) => new SolidColorBrush(Color.FromRgb(value, value, value));
-            Brush panel = highContrast ? SystemColors.WindowBrush : Shade(dark ? (byte)32 : (byte)248);
-            Brush zoneBackground = highContrast ? SystemColors.ControlBrush : Shade(dark ? (byte)54 : (byte)234);
+            static Brush Shade(byte value, byte opacity = 255) => new SolidColorBrush(Color.FromArgb(opacity, value, value, value));
+            Brush panel = highContrast ? SystemColors.WindowBrush : Shade(dark ? (byte)25 : (byte)248, 182);
+            Brush zoneBackground = highContrast ? SystemColors.ControlBrush : Shade(dark ? (byte)78 : (byte)222, 116);
             Brush foreground = highContrast ? SystemColors.ControlTextBrush : dark ? Brushes.WhiteSmoke : Brushes.Black;
             Brush outline = highContrast ? SystemColors.WindowTextBrush : Shade(dark ? (byte)115 : (byte)148);
             Brush selected = highContrast ? SystemColors.HighlightBrush : dark ? Brushes.DeepSkyBlue : Brushes.RoyalBlue;
@@ -112,7 +112,7 @@ namespace DisplayManagerClone
             int top = monitors.Min(m => m.Info.rcMonitor.top);
             int width = monitors.Max(m => m.Info.rcMonitor.right) - left;
             int height = monitors.Max(m => m.Info.rcMonitor.bottom) - top;
-            double scale = Math.Min(420.0 / width, 300.0 / height);
+            double scale = Math.Min(520.0 / width, 380.0 / height);
             var map = new Canvas { Width = width * scale, Height = height * scale };
             var currentMonitor = NativeMethods.MonitorFromWindow(target, NativeMethods.MONITOR_DEFAULTTONEAREST);
             foreach (var monitor in monitors)
@@ -122,8 +122,6 @@ namespace DisplayManagerClone
                 zones.ColumnDefinitions.Add(new ColumnDefinition());
                 zones.ColumnDefinitions.Add(new ColumnDefinition());
                 zones.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                zones.RowDefinitions.Add(new RowDefinition());
-                zones.RowDefinitions.Add(new RowDefinition());
 
                 const string displayPrefix = @"\\.\DISPLAY";
                 string device = monitor.Info.szDevice;
@@ -137,12 +135,41 @@ namespace DisplayManagerClone
                 };
                 Grid.SetColumnSpan(header, 2);
                 zones.Children.Add(header);
-                foreach (var zone in new[] { SnapZone.Left, SnapZone.Right, SnapZone.Full })
+                var choices = new List<(SnapZone Zone, string Caption)>
                 {
+                    (SnapZone.Left, "Left"), (SnapZone.Right, "Right"),
+                    (SnapZone.Top, "Top"), (SnapZone.Bottom, "Bottom"),
+                    (SnapZone.TopLeft, "Top left"), (SnapZone.TopRight, "Top right"),
+                    (SnapZone.BottomLeft, "Bottom left"), (SnapZone.BottomRight, "Bottom right")
+                };
+                var work = monitor.Info.rcWork;
+                if (work.Width >= 2400 && work.Width >= work.Height * 1.6)
+                {
+                    choices.AddRange(new[]
+                    {
+                        (SnapZone.FirstThird, "Left ⅓"), (SnapZone.MiddleThird, "Center ⅓"),
+                        (SnapZone.LastThird, "Right ⅓"), (SnapZone.FirstTwoThirds, "Left ⅔"),
+                        (SnapZone.LastTwoThirds, "Right ⅔")
+                    });
+                }
+                if (work.Width >= 3200 && work.Width >= work.Height * 2.0)
+                {
+                    choices.AddRange(new[]
+                    {
+                        (SnapZone.FirstQuarter, "Column 1 of 4"), (SnapZone.SecondQuarter, "Column 2 of 4"),
+                        (SnapZone.ThirdQuarter, "Column 3 of 4"), (SnapZone.LastQuarter, "Column 4 of 4")
+                    });
+                }
+                int fullRow = 1 + (choices.Count + 1) / 2;
+                for (int row = 1; row <= fullRow; row++) zones.RowDefinitions.Add(new RowDefinition());
+                choices.Add((SnapZone.Full, "Full"));
+                for (int index = 0; index < choices.Count; index++)
+                {
+                    var (zone, caption) = choices[index];
                     var button = new Button
                     {
-                        Content = zone.ToString(), Margin = new Thickness(1), Style = zoneStyle,
-                        ToolTip = $"{label} · {zone}",
+                        Content = caption, Margin = new Thickness(1), Style = zoneStyle,
+                        ToolTip = $"{label} · {caption}",
                         Background = zoneBackground, Foreground = foreground, BorderBrush = outline
                     };
                     button.Click += (_, _) =>
@@ -151,9 +178,10 @@ namespace DisplayManagerClone
                         if (!WindowManager.TrySnapWindow(target, monitor.Handle, zone))
                             MessageBox.Show("The window could not be snapped to that display.", "Snap across monitors");
                     };
-                    Grid.SetRow(button, zone == SnapZone.Full ? 2 : 1);
-                    Grid.SetColumn(button, zone == SnapZone.Right ? 1 : 0);
-                    if (zone == SnapZone.Full) Grid.SetColumnSpan(button, 2);
+                    Grid.SetRow(button, zone == SnapZone.Full ? fullRow : 1 + index / 2);
+                    Grid.SetColumn(button, zone == SnapZone.Full ? 0 : index % 2);
+                    if (zone == SnapZone.Full || (index == choices.Count - 2 && index % 2 == 0))
+                        Grid.SetColumnSpan(button, 2);
                     zones.Children.Add(button);
                 }
                 var card = new Border

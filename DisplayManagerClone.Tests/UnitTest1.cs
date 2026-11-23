@@ -11,6 +11,19 @@ namespace DisplayManagerClone.Tests
 {
     public class ModelAndLogicTests
     {
+        [Theory]
+        [InlineData(SnapZone.TopRight, 0, -51, 51, 0)]
+        [InlineData(SnapZone.BottomLeft, -50, 0, 0, 52)]
+        [InlineData(SnapZone.MiddleThird, -17, -51, 17, 52)]
+        [InlineData(SnapZone.LastTwoThirds, -17, -51, 51, 52)]
+        [InlineData(SnapZone.LastQuarter, 25, -51, 51, 52)]
+        public void SnapBounds_PartitionOddWorkAreaWithNegativeOrigin(SnapZone zone, int left, int top, int right, int bottom)
+        {
+            var area = new NativeMethods.RECT { left = -50, top = -51, right = 51, bottom = 52 };
+            var bounds = WindowManager.GetSnapBounds(area, zone);
+            Assert.Equal((left, top, right, bottom), (bounds.left, bounds.top, bounds.right, bounds.bottom));
+        }
+
         [Fact]
         public void Resolution_EqualityAndToString_WorksCorrectly()
         {

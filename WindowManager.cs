@@ -4,7 +4,12 @@ using System.Runtime.InteropServices;
 
 namespace DisplayManagerClone
 {
-    public enum SnapZone { Left, Right, Full }
+    public enum SnapZone
+    {
+        Left, Right, Full, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight,
+        FirstThird, MiddleThird, LastThird, FirstTwoThirds, LastTwoThirds,
+        FirstQuarter, SecondQuarter, ThirdQuarter, LastQuarter
+    }
 
     public class WindowManager
     {
@@ -14,14 +19,39 @@ namespace DisplayManagerClone
             if (!NativeMethods.IsWindowVisible(hwnd) || !NativeMethods.GetMonitorInfo(monitor, info)) return false;
 
             var area = info.rcWork;
-            if (area.Width < 2 || area.Height < 1) return false;
-            int midpoint = area.left + area.Width / 2;
-            int left = zone == SnapZone.Right ? midpoint : area.left;
-            int right = zone == SnapZone.Left ? midpoint : area.right;
+            if (area.Width < 2 || area.Height < 2) return false;
+            var bounds = GetSnapBounds(area, zone);
             RestoreIfMaximized(hwnd);
             const uint noActivate = 0x0010;
-            return NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, left, area.top,
-                right - left, area.Height, NativeMethods.SWP_NOZORDER | noActivate);
+            return NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, bounds.left, bounds.top,
+                bounds.Width, bounds.Height, NativeMethods.SWP_NOZORDER | noActivate);
+        }
+
+        public static NativeMethods.RECT GetSnapBounds(NativeMethods.RECT area, SnapZone zone)
+        {
+            var columns = zone switch
+            {
+                SnapZone.FirstThird => (0, 1, 3), SnapZone.MiddleThird => (1, 2, 3), SnapZone.LastThird => (2, 3, 3),
+                SnapZone.FirstTwoThirds => (0, 2, 3), SnapZone.LastTwoThirds => (1, 3, 3),
+                SnapZone.FirstQuarter => (0, 1, 4), SnapZone.SecondQuarter => (1, 2, 4),
+                SnapZone.ThirdQuarter => (2, 3, 4), SnapZone.LastQuarter => (3, 4, 4),
+                _ => (0, 0, 0)
+            };
+            if (columns.Item3 != 0)
+            {
+                int origin = area.left;
+                int width = area.Width;
+                area.left = origin + width * columns.Item1 / columns.Item3;
+                area.right = origin + width * columns.Item2 / columns.Item3;
+                return area;
+            }
+            int midX = area.left + area.Width / 2;
+            int midY = area.top + area.Height / 2;
+            if (zone is SnapZone.Left or SnapZone.TopLeft or SnapZone.BottomLeft) area.right = midX;
+            if (zone is SnapZone.Right or SnapZone.TopRight or SnapZone.BottomRight) area.left = midX;
+            if (zone is SnapZone.Top or SnapZone.TopLeft or SnapZone.TopRight) area.bottom = midY;
+            if (zone is SnapZone.Bottom or SnapZone.BottomLeft or SnapZone.BottomRight) area.top = midY;
+            return area;
         }
 
         public static List<IntPtr> GetAllMonitorHandles()
