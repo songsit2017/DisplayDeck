@@ -14,26 +14,40 @@ public partial class App : Application
 {
     private UpdateManager? _updates;
     private DispatcherTimer? _updateTimer;
-    private bool _checkingForUpdates;
+    private Task<string>? _updateCheck;
 
     private async void CheckForUpdates(object? sender, EventArgs e)
     {
-        if (_updates == null || _checkingForUpdates) return;
-        _checkingForUpdates = true;
-        try
-        {
-            var update = await _updates.CheckForUpdatesAsync();
-            if (update != null && _updates.UpdatePendingRestart?.Version != update.TargetFullRelease.Version)
-                await _updates.DownloadUpdatesAsync(update);
-        }
+        try { await CheckForUpdatesAsync(); }
         catch (Exception ex)
         {
             System.Diagnostics.Trace.TraceWarning("DisplayDeck update check failed: {0}", ex.Message);
         }
-        finally
+    }
+
+    internal Task<string> CheckForUpdatesAsync()
+    {
+        if (_updates == null)
+            return Task.FromResult("Automatic updates are available when DisplayDeck is installed using the Windows Setup executable.");
+        if (_updateCheck is { IsCompleted: false }) return _updateCheck;
+        return _updateCheck = DownloadAvailableUpdateAsync(_updates);
+    }
+
+    private static async Task<string> DownloadAvailableUpdateAsync(UpdateManager updates)
+    {
+        try
         {
-            _checkingForUpdates = false;
+            var update = await updates.CheckForUpdatesAsync();
+            if (update != null && !Equals(updates.UpdatePendingRestart?.Version, update.TargetFullRelease.Version))
+                await updates.DownloadUpdatesAsync(update);
         }
+        catch when (updates.UpdatePendingRestart != null)
+        {
+            // An already downloaded update can still be installed without a connection.
+        }
+        return updates.UpdatePendingRestart is { } pending
+            ? $"Version {pending.Version} is ready. Select Exit from the DisplayDeck tray menu to install it, then reopen the app."
+            : $"DisplayDeck {updates.CurrentVersion} is up to date.";
     }
 
     protected override void OnExit(ExitEventArgs e)
