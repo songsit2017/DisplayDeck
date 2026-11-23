@@ -18,10 +18,18 @@
             </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>
         
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,10">
-            <TextBlock x:Name="UpdateStatus" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="560" TextWrapping="Wrap" />
-            <Button x:Name="CheckUpdatesButton" Content="Check for updates" Padding="10,4" Click="CheckUpdates_Click" />
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="10,0,10,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <CheckBox x:Name="ChkSnapOnMaximizeHover" Content="Snap on Maximize hover" VerticalAlignment="Center"
+                      Checked="ChkSnapOnMaximizeHover_Changed" Unchecked="ChkSnapOnMaximizeHover_Changed"
+                      ToolTip="Show DisplayDeck's multi-monitor layout when hovering over a supported Maximize button" />
+            <TextBlock Grid.Column="1" x:Name="UpdateStatus" VerticalAlignment="Center" Margin="12,0" TextWrapping="Wrap" />
+            <Button Grid.Column="2" x:Name="CheckUpdatesButton" Content="Check for updates" Padding="10,4" Click="CheckUpdates_Click" />
+        </Grid>
         <TabControl Margin="10">
             <TabItem Header="Functions (Hotkeys)">
                 <Grid Margin="10">
@@ -197,7 +205,6 @@
                             <CheckBox x:Name="ChkAutoRecovery" Content="Watchdog Auto-Recovery" VerticalAlignment="Center" Margin="0,0,15,0" Checked="ChkAutoRecovery_CheckedChanged" Unchecked="ChkAutoRecovery_CheckedChanged" ToolTip="Automatically restore last active profile on display change" />
                             <CheckBox x:Name="ChkStartWithWindows" Content="Start with Windows" VerticalAlignment="Center" Margin="0,0,15,0" Checked="ChkStartWithWindows_CheckedChanged" Unchecked="ChkStartWithWindows_CheckedChanged" ToolTip="Launch this application automatically when Windows starts" />
                             <CheckBox x:Name="ChkTitleBarButtons" Content="TitleBar Buttons" VerticalAlignment="Center" Checked="ChkTitleBarButtons_CheckedChanged" Unchecked="ChkTitleBarButtons_CheckedChanged" ToolTip="Show quick window management buttons on the title bar of active windows" />
-                            <CheckBox x:Name="ChkSnapOnMaximizeHover" Content="Snap on Maximize hover" Margin="10,0,0,0" VerticalAlignment="Center" Checked="ChkSnapOnMaximizeHover_Changed" Unchecked="ChkSnapOnMaximizeHover_Changed" ToolTip="Show DisplayDeck's monitor layout when hovering over a supported Maximize button" />
                         </StackPanel>
                         
                         <Button Grid.Column="2" Content="Identify" Padding="20,5" Click="Identify_Click" FontWeight="Bold" Background="#FF333333" Foreground="White" />
