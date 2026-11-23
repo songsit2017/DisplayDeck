@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Velopack;
+using Velopack.Sources;
 
 namespace DisplayManagerClone;
 
@@ -10,6 +12,45 @@ namespace DisplayManagerClone;
 /// </summary>
 public partial class App : Application
 {
+    private UpdateManager? _updates;
+    private DispatcherTimer? _updateTimer;
+    private bool _checkingForUpdates;
+
+    private async void CheckForUpdates(object? sender, EventArgs e)
+    {
+        if (_updates == null || _checkingForUpdates) return;
+        _checkingForUpdates = true;
+        try
+        {
+            var update = await _updates.CheckForUpdatesAsync();
+            if (update != null && _updates.UpdatePendingRestart?.Version != update.TargetFullRelease.Version)
+                await _updates.DownloadUpdatesAsync(update);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("DisplayDeck update check failed: {0}", ex.Message);
+        }
+        finally
+        {
+            _checkingForUpdates = false;
+        }
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _updateTimer?.Stop();
+        try
+        {
+            if (_updates?.UpdatePendingRestart is { } pending)
+                _updates.WaitExitThenApplyUpdates(pending, silent: true, restart: false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("DisplayDeck update apply failed: {0}", ex.Message);
+        }
+        base.OnExit(e);
+    }
+
     private static void LogException(string type, Exception ex)
     {
         try
@@ -35,6 +76,23 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        try
+        {
+            var updates = new UpdateManager(new GithubSource("https://github.com/songsit2017/DisplayDeck", null, false));
+            if (updates.IsInstalled)
+            {
+                _updates = updates;
+                _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
+                _updateTimer.Tick += CheckForUpdates;
+                _updateTimer.Start();
+                Dispatcher.BeginInvoke(() => CheckForUpdates(null, EventArgs.Empty), DispatcherPriority.ApplicationIdle);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("DisplayDeck updater initialization failed: {0}", ex.Message);
+        }
 
         // UI Exceptions
         this.DispatcherUnhandledException += (s, args) =>
