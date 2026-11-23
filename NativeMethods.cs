@@ -65,20 +65,23 @@ namespace DisplayManagerClone
             public uint dwFlags;
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public class MONITORINFOEX : MONITORINFO
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public class MONITORINFOEX
         {
+            public int cbSize = Marshal.SizeOf<MONITORINFOEX>();
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public string szDevice = string.Empty;
-
-            public MONITORINFOEX()
-            {
-                cbSize = Marshal.SizeOf(typeof(MONITORINFOEX));
-            }
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern bool GetMonitorInfo(IntPtr hMonitor, MONITORINFO lpmi);
+
+        [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, [In, Out] MONITORINFOEX lpmi);
 
         [DllImport("shcore.dll")]
         public static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
