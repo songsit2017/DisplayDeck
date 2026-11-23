@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace DisplayManagerClone
 {
@@ -95,6 +96,18 @@ namespace DisplayManagerClone
                 .ToArray();
             if (!NativeMethods.IsWindowVisible(target) || monitors.Length == 0) return;
 
+            bool dark = Equals(Registry.GetValue(
+                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme", 1), 0);
+            bool highContrast = SystemParameters.HighContrast;
+            static Brush Shade(byte value) => new SolidColorBrush(Color.FromRgb(value, value, value));
+            Brush panel = highContrast ? SystemColors.WindowBrush : Shade(dark ? (byte)32 : (byte)248);
+            Brush zoneBackground = highContrast ? SystemColors.ControlBrush : Shade(dark ? (byte)54 : (byte)234);
+            Brush foreground = highContrast ? SystemColors.ControlTextBrush : dark ? Brushes.WhiteSmoke : Brushes.Black;
+            Brush outline = highContrast ? SystemColors.WindowTextBrush : Shade(dark ? (byte)115 : (byte)148);
+            Brush selected = highContrast ? SystemColors.HighlightBrush : dark ? Brushes.DeepSkyBlue : Brushes.RoyalBlue;
+            var zoneStyle = (Style)Resources["SnapZoneButtonStyle"];
+
             int left = monitors.Min(m => m.Info.rcMonitor.left);
             int top = monitors.Min(m => m.Info.rcMonitor.top);
             int width = monitors.Max(m => m.Info.rcMonitor.right) - left;
@@ -108,7 +121,11 @@ namespace DisplayManagerClone
                 var zones = new UniformGrid { Columns = 2, Rows = 2 };
                 foreach (var zone in new[] { SnapZone.Left, SnapZone.Right, SnapZone.Full })
                 {
-                    var button = new Button { Content = zone.ToString(), Margin = new Thickness(1) };
+                    var button = new Button
+                    {
+                        Content = zone.ToString(), Margin = new Thickness(1), Style = zoneStyle,
+                        Background = zoneBackground, Foreground = foreground, BorderBrush = outline
+                    };
                     button.Click += (_, _) =>
                     {
                         _snapPicker.IsOpen = false;
@@ -122,7 +139,8 @@ namespace DisplayManagerClone
                     Width = bounds.Width * scale,
                     Height = bounds.Height * scale,
                     BorderThickness = new Thickness(2),
-                    BorderBrush = monitor.Handle == currentMonitor ? Brushes.DeepSkyBlue : Brushes.Gray,
+                    BorderBrush = monitor.Handle == currentMonitor ? selected : outline,
+                    CornerRadius = new CornerRadius(5),
                     Child = zones
                 };
                 Canvas.SetLeft(card, (bounds.left - left) * scale);
@@ -130,7 +148,11 @@ namespace DisplayManagerClone
                 map.Children.Add(card);
             }
 
-            _snapPicker.Child = new Border { Background = Brushes.WhiteSmoke, Padding = new Thickness(8), Child = map };
+            _snapPicker.Child = new Border
+            {
+                Background = panel, BorderBrush = outline, BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8), Padding = new Thickness(8), Child = map
+            };
             _openedByHover = fromHover;
             _snapPicker.StaysOpen = fromHover;
             _snapPicker.PlacementTarget = fromHover ? null : BtnSnap;
