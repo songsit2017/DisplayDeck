@@ -1,4 +1,4 @@
-# DisplayManagerClone
+# DisplayDeck
 
 WPF / .NET 8 Multi-Monitor & Window Management Utility (inspired by DisplayFusion).
 
@@ -22,3 +22,9 @@ dotnet test DisplayManagerClone.sln
 # Run Application
 dotnet run --project DisplayManagerClone.csproj
 ```
+
+## Installer and updates
+
+Download `DisplayDeck-win-Setup.exe` from [GitHub Releases](https://github.com/songsit2017/DisplayDeck/releases). The installer includes the complete Windows x64 app and its .NET runtime. Installed copies check for updates on startup and every six hours, download them in the background, and apply them when you select **Exit** from the tray menu.
+
+To package a release on Windows, run `./Build-Installer.ps1 -Version 1.0.1` with an unused version. Upload the setup executable, full `.nupkg` and `releases.win.json` together to the corresponding GitHub release. Publish stable releases only when they are ready for installed copies to pick them up.
