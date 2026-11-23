@@ -263,6 +263,20 @@ namespace DisplayManagerClone
             _titleBarOverlay.AttachTo(fg, leftDip, topDip);
         }
 
+        private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            if (Application.Current is not App app) return;
+            CheckUpdatesButton.IsEnabled = false;
+            UpdateStatus.Text = "Checking for and downloading updates…";
+            try { UpdateStatus.Text = await app.CheckForUpdatesAsync(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceWarning("Manual update check failed: {0}", ex.Message);
+                UpdateStatus.Text = "Update check failed. Check your connection and try again.";
+            }
+            finally { CheckUpdatesButton.IsEnabled = true; }
+        }
+
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             if (_foregroundHook != IntPtr.Zero)
