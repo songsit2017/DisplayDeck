@@ -113,7 +113,10 @@ namespace DisplayManagerClone
             int width = monitors.Max(m => m.Info.rcMonitor.right) - left;
             int height = monitors.Max(m => m.Info.rcMonitor.bottom) - top;
             double scale = Math.Min(520.0 / width, 380.0 / height);
-            var map = new Canvas { Width = width * scale, Height = height * scale };
+            double scaleX = Math.Max(scale, monitors.Max(m => 168.0 / m.Info.rcMonitor.Width));
+            double scaleY = scale;
+            var map = new Canvas { Width = width * scaleX };
+            var cards = new List<(Border Card, NativeMethods.RECT Bounds)>();
             var currentMonitor = NativeMethods.MonitorFromWindow(target, NativeMethods.MONITOR_DEFAULTTONEAREST);
             foreach (var monitor in monitors)
             {
@@ -121,7 +124,7 @@ namespace DisplayManagerClone
                 var zones = new Grid();
                 zones.ColumnDefinitions.Add(new ColumnDefinition());
                 zones.ColumnDefinitions.Add(new ColumnDefinition());
-                zones.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                zones.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto, MinHeight = 22 });
 
                 const string displayPrefix = @"\\.\DISPLAY";
                 string device = monitor.Info.szDevice;
@@ -161,7 +164,10 @@ namespace DisplayManagerClone
                     });
                 }
                 int fullRow = 1 + (choices.Count + 1) / 2;
-                for (int row = 1; row <= fullRow; row++) zones.RowDefinitions.Add(new RowDefinition());
+                const double minimumRowHeight = 26;
+                for (int row = 1; row <= fullRow; row++)
+                    zones.RowDefinitions.Add(new RowDefinition { MinHeight = minimumRowHeight });
+                scaleY = Math.Max(scaleY, (30 + fullRow * minimumRowHeight) / bounds.Height);
                 choices.Add((SnapZone.Full, "Full"));
                 for (int index = 0; index < choices.Count; index++)
                 {
@@ -186,22 +192,35 @@ namespace DisplayManagerClone
                 }
                 var card = new Border
                 {
-                    Width = bounds.Width * scale,
-                    Height = bounds.Height * scale,
+                    Width = bounds.Width * scaleX,
                     BorderThickness = new Thickness(2),
                     BorderBrush = monitor.Handle == currentMonitor ? selected : outline,
                     CornerRadius = new CornerRadius(5),
                     Child = zones
                 };
-                Canvas.SetLeft(card, (bounds.left - left) * scale);
-                Canvas.SetTop(card, (bounds.top - top) * scale);
+                cards.Add((card, bounds));
+            }
+
+            map.Height = height * scaleY;
+            foreach (var (card, bounds) in cards)
+            {
+                card.Height = bounds.Height * scaleY;
+                Canvas.SetLeft(card, (bounds.left - left) * scaleX);
+                Canvas.SetTop(card, (bounds.top - top) * scaleY);
                 map.Children.Add(card);
             }
+
+            var viewport = new ScrollViewer
+            {
+                MaxWidth = 540, MaxHeight = 440, Content = map,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
 
             _snapPicker.Child = new Border
             {
                 Background = panel, BorderBrush = outline, BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8), Padding = new Thickness(8), Child = map
+                CornerRadius = new CornerRadius(8), Padding = new Thickness(8), Child = viewport
             };
             _openedByHover = fromHover;
             _snapPicker.StaysOpen = fromHover;
