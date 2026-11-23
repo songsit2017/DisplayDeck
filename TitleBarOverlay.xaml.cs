@@ -91,7 +91,7 @@ namespace DisplayManagerClone
         private void ShowSnapPicker(IntPtr target, bool fromHover)
         {
             var monitors = WindowManager.GetAllMonitorHandles()
-                .Select(handle => (Handle: handle, Info: new NativeMethods.MONITORINFO()))
+                .Select(handle => (Handle: handle, Info: new NativeMethods.MONITORINFOEX()))
                 .Where(m => NativeMethods.GetMonitorInfo(m.Handle, m.Info) && m.Info.rcWork.Width > 0 && m.Info.rcWork.Height > 0)
                 .ToArray();
             if (!NativeMethods.IsWindowVisible(target) || monitors.Length == 0) return;
@@ -118,12 +118,31 @@ namespace DisplayManagerClone
             foreach (var monitor in monitors)
             {
                 var bounds = monitor.Info.rcMonitor;
-                var zones = new UniformGrid { Columns = 2, Rows = 2 };
+                var zones = new Grid();
+                zones.ColumnDefinitions.Add(new ColumnDefinition());
+                zones.ColumnDefinitions.Add(new ColumnDefinition());
+                zones.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                zones.RowDefinitions.Add(new RowDefinition());
+                zones.RowDefinitions.Add(new RowDefinition());
+
+                const string displayPrefix = @"\\.\DISPLAY";
+                string device = monitor.Info.szDevice;
+                string label = device.StartsWith(displayPrefix, StringComparison.OrdinalIgnoreCase)
+                    ? $"Display {device[displayPrefix.Length..]}"
+                    : device;
+                var header = new TextBlock
+                {
+                    Text = label, Foreground = foreground, FontWeight = FontWeights.SemiBold,
+                    TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(5, 2, 5, 2)
+                };
+                Grid.SetColumnSpan(header, 2);
+                zones.Children.Add(header);
                 foreach (var zone in new[] { SnapZone.Left, SnapZone.Right, SnapZone.Full })
                 {
                     var button = new Button
                     {
                         Content = zone.ToString(), Margin = new Thickness(1), Style = zoneStyle,
+                        ToolTip = $"{label} · {zone}",
                         Background = zoneBackground, Foreground = foreground, BorderBrush = outline
                     };
                     button.Click += (_, _) =>
@@ -132,6 +151,9 @@ namespace DisplayManagerClone
                         if (!WindowManager.TrySnapWindow(target, monitor.Handle, zone))
                             MessageBox.Show("The window could not be snapped to that display.", "Snap across monitors");
                     };
+                    Grid.SetRow(button, zone == SnapZone.Full ? 2 : 1);
+                    Grid.SetColumn(button, zone == SnapZone.Right ? 1 : 0);
+                    if (zone == SnapZone.Full) Grid.SetColumnSpan(button, 2);
                     zones.Children.Add(button);
                 }
                 var card = new Border
