@@ -4,8 +4,26 @@ using System.Runtime.InteropServices;
 
 namespace DisplayManagerClone
 {
+    public enum SnapZone { Left, Right, Full }
+
     public class WindowManager
     {
+        public static bool TrySnapWindow(IntPtr hwnd, IntPtr monitor, SnapZone zone)
+        {
+            var info = new NativeMethods.MONITORINFO();
+            if (!NativeMethods.IsWindowVisible(hwnd) || !NativeMethods.GetMonitorInfo(monitor, info)) return false;
+
+            var area = info.rcWork;
+            if (area.Width < 2 || area.Height < 1) return false;
+            int midpoint = area.left + area.Width / 2;
+            int left = zone == SnapZone.Right ? midpoint : area.left;
+            int right = zone == SnapZone.Left ? midpoint : area.right;
+            RestoreIfMaximized(hwnd);
+            const uint noActivate = 0x0010;
+            return NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, left, area.top,
+                right - left, area.Height, NativeMethods.SWP_NOZORDER | noActivate);
+        }
+
         public static List<IntPtr> GetAllMonitorHandles()
         {
             var monitors = new List<IntPtr>();

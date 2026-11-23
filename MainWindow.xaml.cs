@@ -201,7 +201,7 @@ namespace DisplayManagerClone
 
         private void UpdateTitleBarOverlayPosition()
         {
-            if (!_isTitleBarButtonsEnabled || _titleBarOverlay == null) return;
+            if (!_isTitleBarButtonsEnabled || _titleBarOverlay == null || _titleBarOverlay.IsSnapPickerOpen) return;
 
             IntPtr fg = NativeMethods.GetForegroundWindow();
             if (fg == IntPtr.Zero || !NativeMethods.IsWindowVisible(fg))
@@ -239,7 +239,7 @@ namespace DisplayManagerClone
 
             // Position: Top-right area next to minimize/maximize/close buttons
             // Typically close/min/max buttons occupy about 140px on the right
-            double leftDip = (rect.right - 250) / dpiScale;
+            double leftDip = (rect.right - 140) / dpiScale - _titleBarOverlay.Width;
             double topDip = (rect.top + 4) / dpiScale;
 
             _lastForegroundHwnd = fg;
